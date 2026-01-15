@@ -33,6 +33,7 @@ const mockUsers: User[] = [
   { id: 3, name: 'Charlie Lee', avatar: '🧑‍🔬', status: 'offline' },
   { id: 4, name: 'Diana Park', avatar: '👩‍🏫', status: 'online' },
   { id: 5, name: 'Ethan Wang', avatar: '👨‍💼', status: 'offline' },
+  { id: 6, name: 'Cute', avatar: '✨', status: 'online' },
 ];
 
 const mockUserProfile: UserProfile = {
@@ -57,6 +58,9 @@ const initialMockMessages: Record<number, Message[]> = {
     { id: 1, sender: 'Diana Park', text: 'Can we schedule a meeting tomorrow?', isUserMessage: false, timestamp: new Date(Date.now() - 86400000) },
   ],
   5: [],
+  6: [
+    { id: 1, sender: 'Cute', text: 'Hi! I\'m Cute! ✨ I\'m so happy to meet you! (｡♥‿♥｡)', isUserMessage: false, timestamp: new Date() },
+  ],
 };
 
 export default function Home() {
@@ -64,6 +68,8 @@ export default function Home() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Record<number, Message[]>>(initialMockMessages);
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId] = useState(() => `session_${Math.random().toString(36).substr(2, 9)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -77,41 +83,102 @@ export default function Home() {
   };
 
   // Handle sending message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inputText.trim() || !selectedUser) return;
+    if (!inputText.trim() || !selectedUser || isTyping) return;
+
+    const userText = inputText;
+    const currentUserId = selectedUser.id;
+    const personaId = selectedUser.name.toLowerCase() === 'cute' ? 'cute' : 'default';
 
     const newMessage: Message = {
       id: Date.now(),
       sender: 'You',
-      text: inputText,
+      text: userText,
       isUserMessage: true,
       timestamp: new Date(),
     };
 
     setConversations(prev => ({
       ...prev,
-      [selectedUser.id]: [...(prev[selectedUser.id] || []), newMessage],
+      [currentUserId]: [...(prev[currentUserId] || []), newMessage],
     }));
 
     setInputText('');
+    setIsTyping(true);
 
-    // Simulate a response after 1 second
-    setTimeout(() => {
-      const responseMessage: Message = {
-        id: Date.now() + 1,
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: (conversations[currentUserId] || []).concat(newMessage).map(m => ({
+            role: m.isUserMessage ? 'user' : 'assistant',
+            content: m.text,
+          })),
+          sessionId,
+          personaId,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+
+      // Create a message placeholder for the AI response
+      const aiMessageId = Date.now() + 1;
+      const aiMessage: Message = {
+        id: aiMessageId,
         sender: selectedUser.name,
-        text: `Thanks for your message! (This is a simulated response from ${selectedUser.name})`,
+        text: '',
         isUserMessage: false,
         timestamp: new Date(),
       };
 
       setConversations(prev => ({
         ...prev,
-        [selectedUser.id]: [...(prev[selectedUser.id] || []), responseMessage],
+        [currentUserId]: [...(prev[currentUserId] || []), aiMessage],
       }));
-    }, 1000);
+
+      // Read the stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+
+          // Update the specific AI message in the conversation
+          setConversations(prev => {
+            const userMsgs = [...(prev[currentUserId] || [])];
+            const msgIndex = userMsgs.findIndex(m => m.id === aiMessageId);
+            if (msgIndex !== -1) {
+              userMsgs[msgIndex] = { ...userMsgs[msgIndex], text: fullText };
+            }
+            return { ...prev, [currentUserId]: userMsgs };
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: Date.now() + 2,
+        sender: 'System',
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUserMessage: false,
+        timestamp: new Date(),
+      };
+      setConversations(prev => ({
+        ...prev,
+        [currentUserId]: [...(prev[currentUserId] || []), errorMessage],
+      }));
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   // Get current conversation
@@ -203,6 +270,13 @@ export default function Home() {
                       </div>
                     </div>
                   ))
+                )}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="bg-white text-gray-500 border border-gray-200 rounded-2xl px-4 py-2 shadow-sm italic text-sm">
+                      {selectedUser.name} is typing...
+                    </div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -307,7 +381,7 @@ export default function Home() {
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
             <h4 className="font-semibold text-blue-900 mb-2">📌 Note</h4>
             <p className="text-sm text-blue-800">
-              This is a prototype interface using mock data. No backend APIs are connected.
+              The AI is now connected! Chat with <strong>Cute</strong> to experience the <code>qwen-turbo</code> model with its custom persona.
             </p>
           </div>
         </div>
