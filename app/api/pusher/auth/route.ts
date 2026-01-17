@@ -16,13 +16,35 @@ export async function POST(req: NextRequest) {
     const channelName = body.get('channel_name') as string;
 
     if (!socketId || !channelName) {
+      console.error('Missing socket_id or channel_name');
       return new Response('Missing socket_id or channel_name', { status: 400 });
     }
 
-    // 在这里你可以添加逻辑来验证用户是否有权访问该频道
-    // 简单的 MVP 暂时允许所有请求
+    console.log('Auth request for channel:', channelName);
+
+    // Support for presence channels
+    if (channelName.startsWith('presence-')) {
+      // Extract userName from custom params (sent from client auth.params)
+      const userName = body.get('user_name') as string || 'Anonymous';
+      const userId = body.get('user_id') as string || `user_${Date.now()}`;
+
+      console.log('Presence auth for user:', userName, 'with ID:', userId);
+
+      const presenceData = {
+        user_id: userId,
+        user_info: {
+          name: userName,
+        },
+      };
+
+      const authResponse = pusher.authorizeChannel(socketId, channelName, presenceData);
+      console.log('Auth response generated successfully');
+      return NextResponse.json(authResponse);
+    }
+
+    // Standard private channel auth
+    console.log('Private channel auth');
     const authResponse = pusher.authenticate(socketId, channelName);
-    
     return NextResponse.json(authResponse);
   } catch (error) {
     console.error('Pusher auth error:', error);
