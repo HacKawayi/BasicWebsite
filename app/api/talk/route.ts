@@ -26,30 +26,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing sessionId or content' }, { status: 400 });
     }
 
-    await dbConnect();
+    // NOTE: 人类-人类对话暂时不需要存入 MongoDB — 以下数据库写入逻辑已注释
+    // await dbConnect();
 
-    const timestamp = new Date();
-    const messageToAdd = {
-      role: role || 'user', // Default to user if not specified
-      content: content,
-      timestamp: timestamp,
-    };
+    // const timestamp = new Date();
+    // const messageToAdd = {
+    //   role: role || 'user', // Default to user if not specified
+    //   content: content,
+    //   timestamp: timestamp,
+    // };
 
-    // 保存消息到 MongoDB (存在即更新，不存在即创建会话)
-    await GameSession.findOneAndUpdate(
-      { sessionId },
-      {
-        $setOnInsert: {
-          sessionId,
-          startTime: new Date(),
-          actualOpponent: 'HUMAN', // 标识为真人对战
-        },
-        $push: {
-          messages: messageToAdd,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    // // 保存消息到 MongoDB (存在即更新，不存在即创建会话)
+    // await GameSession.findOneAndUpdate(
+    //   { sessionId },
+    //   {
+    //     $setOnInsert: {
+    //       sessionId,
+    //       startTime: new Date(),
+    //       actualOpponent: 'HUMAN', // 标识为真人对战
+    //     },
+    //     $push: {
+    //       messages: messageToAdd,
+    //     },
+    //   },
+    //   { upsert: true, new: true, setDefaultsOnInsert: true }
+    // );
 
     // 触发 Pusher 事件进行实时广播
     // 使用 private channel 以增加安全性 (格式: private-session-ID)
