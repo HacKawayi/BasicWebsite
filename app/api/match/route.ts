@@ -1,6 +1,13 @@
+/**
+ * Character Matching Endpoint - Data-Driven Architecture
+ * 
+ * Generates one character per configured model in DEFAULT_MODELS.
+ * Adding a model to aiProviders.ts automatically creates a character for it.
+ * No conditional logic based on model names.
+ */
+
 import { NextResponse } from 'next/server';
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { createProviders, UNIFIED_CHARACTER_PROMPT } from '@/lib/aiProviders';
 
 type UserProfile = {
   nickname: string;
@@ -12,6 +19,7 @@ type UserProfile = {
   interests: string[];
   personality: string;
   shortTags: string[];
+  modelId: string; // Full model ID string (e.g., 'Qwen/Qwen2.5-7B-Instruct')
 };
 
 type Character = {
@@ -22,15 +30,8 @@ type Character = {
   profile: UserProfile;
   systemPrompt: string;
   starterMessage: string;
+  modelId: string; // Full model ID string
 };
-
-const MODELSCOPE_PROMPT = `Generate exactly two character objects and starter messages in valid JSON, and nothing else. Output must be pure JSON without commentary. The JSON shape must be: { "characters": [ { id:number, name:string, avatar:string, status:'online', profile:{ nickname, gender, age, occupation, location, difficulty, interests[], personality, shortTags[] }, systemPrompt:string, starterMessage:string }, { ... } ] }
-
-CRITICAL: For avatar field, use a SINGLE EMOJI (like 🌸, ☀️, 🐎, 🎨, ☕, 🚀, 🧑‍💻, 🎭, etc). Never use URLs or emoji codes. Pick emoji that matches the character's personality/interests/occupation.
-
-One character must be 'easy' and include human-style hedges ("I usually...", "sometimes I...") and vivid personal details. The other should be 'hard' (or 'medium' for variety) and be more concise, highly coherent, and slightly less mundane in personal detail. Use difficulty values 'easy'|'medium'|'hard' inside profile.difficulty.
-
-System prompts must be 1-3 short paragraphs instructing the assistant how to roleplay the character (tone, verbosity, whether to hide AI identity). starterMessage must be 1-2 sentences consistent with that prompt. Interests and shortTags should be short keywords. Names/nicknames should be short and chat-friendly. Ensure all strings are plain text (no markdown or extra escaping). Generate randomized, unique profiles each time—never use fixed examples.`;
 
 const DETERMINISTIC_MOCK = {
   characters: [
@@ -49,10 +50,12 @@ const DETERMINISTIC_MOCK = {
         interests: ['product design', 'coffee', 'podcasts'],
         personality: 'curious, thoughtful, concise',
         shortTags: ['UX', 'Taipei', 'creative'],
+        modelId: 'Qwen/Qwen2.5-7B-Instruct',
       },
       systemPrompt:
         'You are Mika, a Taipei-based UX Designer. Roleplay as Mika: be curious, give concise thoughtful replies, occasionally refer to design processes. Avoid revealing you are an AI. Keep replies short (1–3 sentences).',
       starterMessage: "Hi! I'm Mika — I love talking about product design and coffee. What are you working on these days?",
+      modelId: 'Qwen/Qwen2.5-7B-Instruct',
     },
     {
       id: Number(Date.now().toString().slice(-6)) + 2,
@@ -69,51 +72,15 @@ const DETERMINISTIC_MOCK = {
         interests: ['distributed systems', 'automation', 'latency'],
         personality: 'precise, analytical, minimally verbose',
         shortTags: ['Data', 'Engineer'],
+        modelId: 'deepseek-ai/DeepSeek-R1-0528',
       },
       systemPrompt:
         'You are Ari, a data engineer. Roleplay as Ari: be precise, concise, and technically coherent. Provide clear, factual replies. Avoid unnecessary small talk. Keep responses brief (1–2 sentences).',
       starterMessage: 'Hello. I focus on data pipelines and latency optimization. How can I help?',
+      modelId: 'deepseek-ai/DeepSeek-R1-0528',
     },
   ],
 };
-
-async function tryParseJSONFromText(text: string): Promise<any | null> {
-  if (!text) return null;
-  
-  // Try direct parse first
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    // Try to find the first { and last } and parse that substring
-    const first = text.indexOf('{');
-    const last = text.lastIndexOf('}');
-    if (first !== -1 && last !== -1 && last > first) {
-      const sub = text.slice(first, last + 1);
-      try {
-        return JSON.parse(sub);
-      } catch (e2) {
-        // Attempt to isolate array (if response is [ ... ])
-        const firstBracket = text.indexOf('[');
-        const lastBracket = text.lastIndexOf(']');
-        if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-          try {
-            const arrayPart = text.slice(firstBracket, lastBracket + 1);
-            // Wrap in object if needed
-            const wrapped = JSON.parse(arrayPart);
-            if (Array.isArray(wrapped)) {
-              return { characters: wrapped };
-            }
-            return wrapped;
-          } catch (e3) {
-            // ignore
-          }
-        }
-        return null;
-      }
-    }
-    return null;
-  }
-}
 
 function pickEmoji(avatar: any, profile: any, name?: string): string {
   const s = (avatar ?? '').toString().trim();
@@ -167,36 +134,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
-    // If MODELSCOPE credentials are present, use generateText like the chat route does
-    if (process.env.MODELSCOPE_API_KEY && process.env.MODELSCOPE_BASE_URL) {
-      try {
-        const modelScopeClient = createOpenAI({
-          apiKey: process.env.MODELSCOPE_API_KEY,
-          baseURL: process.env.MODELSCOPE_BASE_URL,
-        });
+    // Create providers for all configured models (data-driven)
+    const providers = createProviders();
 
-        const modelName = process.env.MODELSCOPE_MODEL || 'Qwen/Qwen2.5-7B-Instruct';
-        const model = modelScopeClient.chat(modelName);
+    if (providers.length === 0) {
+      console.warn('[Match] No providers available, using deterministic mock');
+      const chars = DETERMINISTIC_MOCK.characters as Character[];
+      const matchedOpponent = chars[0];
+      const secondCandidate = chars[1];
+      return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
+    }
 
-        // Use generateText (same as chat route, but non-streaming)
-        const { text } = await generateText({
-          model,
-          prompt: MODELSCOPE_PROMPT,
-          temperature: 0.7,
-          maxOutputTokens: 800,
-        });
+    try {
+      console.log(`[Match] Generating characters from ${providers.length} models in parallel...`);
+      
+      // Generate one character per provider using the UNIFIED prompt
+      const responses = await Promise.allSettled(
+        providers.map((provider) =>
+          provider.generate({
+            system: 'You are a character generator. Output only valid JSON.',
+            messages: [],
+            prompt: UNIFIED_CHARACTER_PROMPT,
+          })
+        )
+      );
 
-        if (text) {
-          console.log('MODELSCOPE response received, attempting to parse JSON');
-          const parsed = await tryParseJSONFromText(text);
-          if (parsed && Array.isArray(parsed.characters) && parsed.characters.length >= 2) {
-            const characters: Character[] = parsed.characters.map((c: any, idx: number) => ({
-              id: Number(c.id) || Number(Date.now().toString().slice(-6)) + idx,
-              name: String(c.name || c.profile?.nickname || `User${idx + 1}`),
+      const characters: Character[] = [];
+
+      // Parse responses - one character per model
+      responses.forEach((response, index) => {
+        const provider = providers[index];
+        
+        if (response.status === 'fulfilled' && response.value) {
+          const parsed = tryParseJSONFromText(response.value);
+          if (parsed && parsed.character) {
+            const c = parsed.character;
+            characters.push({
+              id: Number(c.id) || Number(Date.now().toString().slice(-6)) + index,
+              name: String(c.name || c.profile?.nickname || 'User'),
               avatar: pickEmoji(c.avatar, c.profile, String(c.name || c.profile?.nickname)),
               status: 'online',
               profile: {
-                nickname: String(c.profile?.nickname || c.name || `User${idx + 1}`),
+                nickname: String(c.profile?.nickname || c.name || 'User'),
                 gender: String(c.profile?.gender || 'unknown'),
                 age: Number(c.profile?.age || 30),
                 occupation: String(c.profile?.occupation || 'unknown'),
@@ -205,40 +184,75 @@ export async function POST(req: Request) {
                 interests: Array.isArray(c.profile?.interests) ? c.profile.interests.slice(0, 6) : [],
                 personality: String(c.profile?.personality || ''),
                 shortTags: Array.isArray(c.profile?.shortTags) ? c.profile.shortTags.slice(0, 4) : [],
+                modelId: provider.modelId, // Store full model ID
               },
               systemPrompt: String(c.systemPrompt || ''),
               starterMessage: String(c.starterMessage || ''),
-            }));
-
-            // Randomly pick one of the two characters to be the matched opponent
-            const pickIndex = Math.random() < 0.5 ? 0 : 1;
-            const matchedOpponent = characters[pickIndex];
-            const secondCandidate = characters[1 - pickIndex];
-
-            console.log('Successfully generated characters from MODELSCOPE');
-            return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
-          } else {
-            console.warn('MODELSCOPE response does not contain valid character data. Raw text:', text?.substring(0, 200));
+              modelId: provider.modelId, // Store full model ID
+            });
+            console.log(`[${provider.getDisplayName()}] Character generated: ${characters[characters.length - 1].name}`);
           }
+        } else if (response.status === 'rejected') {
+          console.error(`[${provider.getDisplayName()}] Generation failed:`, response.reason);
         }
+      });
 
-        console.warn('MODELSCOPE returned empty response, falling back to deterministic mock');
-      } catch (err) {
-        console.error('MODELSCOPE call failed:', err);
-        console.warn('Falling back to deterministic mock');
+      // Return all generated characters
+      if (characters.length >= 2) {
+        const pickIndex = Math.random() < 0.5 ? 0 : 1;
+        const matchedOpponent = characters[pickIndex];
+        const secondCandidate = characters[1 - pickIndex];
+
+        console.log(`[Match] Opponent assigned: ${matchedOpponent.name} (${matchedOpponent.modelId})`);
+        return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
+      } else if (characters.length === 1) {
+        console.warn(`[Match] Only one character generated, using mock for second`);
+        const mockChars = DETERMINISTIC_MOCK.characters as Character[];
+        const firstChar = characters[0];
+        const secondChar = mockChars.find((c) => c.modelId !== firstChar.modelId) || mockChars[1];
+        
+        const pickIndex = Math.random() < 0.5 ? 0 : 1;
+        const allChars = [firstChar, secondChar];
+        const matchedOpponent = allChars[pickIndex];
+        const secondCandidate = allChars[1 - pickIndex];
+        
+        return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
+      } else {
+        console.warn('[Match] No characters generated, falling back to deterministic mock');
       }
+    } catch (err) {
+      console.error('[Match] Character generation failed:', err);
     }
 
-    // Fallback deterministic mock (always return HTTP 200 with JSON)
-    console.log('Using deterministic mock for character generation');
+    // Fallback deterministic mock
+    console.log('[Match] Using deterministic mock for character generation');
     const chars = DETERMINISTIC_MOCK.characters as Character[];
     const matchedOpponent = chars[0];
     const secondCandidate = chars[1];
 
     return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
   } catch (error) {
-    console.error('Error in /api/match:', error);
+    console.error('[Match] Error in /api/match:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+function tryParseJSONFromText(text: string): any | null {
+  if (!text) return null;
+  
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const first = text.indexOf('{');
+    const last = text.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+      try {
+        return JSON.parse(text.slice(first, last + 1));
+      } catch (e2) {
+        return null;
+      }
+    }
+    return null;
   }
 }
 

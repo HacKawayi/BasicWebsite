@@ -401,7 +401,7 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversations, selectedUser]);
 
-  // Auto-create an AI opponent once after login if none selected
+  // Auto-create AI opponents once after login - display BOTH characters (Qwen and DeepSeek)
   const createAIOpponent = async () => {
     if (selectedUser) return;
     try {
@@ -415,10 +415,24 @@ export default function Home() {
       if (!res.ok) throw new Error('Failed to fetch match');
 
       const data = await res.json();
-      const { matchedOpponent, starterMessage } = data;
+      const { matchedOpponent, secondCandidate } = data;
       if (!matchedOpponent) throw new Error('No matchedOpponent');
 
-      const aiUser: User = {
+      console.log('[Frontend] Received characters:', { 
+        matched: matchedOpponent.name, 
+        second: secondCandidate?.name 
+      });
+
+      console.log('[Frontend] Model IDs:', {
+        matched: matchedOpponent.modelId,
+        second: secondCandidate?.modelId
+      });
+
+      // Create User objects for both characters (Qwen and DeepSeek)
+      const aiUsers: User[] = [];
+
+      // First character (matchedOpponent)
+      const firstUser: User = {
         id: matchedOpponent.id,
         name: matchedOpponent.name,
         avatar: matchedOpponent.avatar || getAvatarForUser(matchedOpponent.name || 'AI'),
@@ -427,24 +441,63 @@ export default function Home() {
         profile: matchedOpponent.profile,
         systemPrompt: matchedOpponent.systemPrompt,
       };
+      aiUsers.push(firstUser);
 
-      setAllUsers(prev => [...prev, aiUser]);
-
-      const assistantMsg: Message = {
+      // Initialize conversation for first user with their starter message
+      const firstAssistantMsg: Message = {
         id: Date.now(),
-        sender: aiUser.name,
-        text: starterMessage || '',
+        sender: firstUser.name,
+        text: matchedOpponent.starterMessage || 'Hi there!',
         isUserMessage: false,
         timestamp: new Date(),
       };
 
       setConversations(prev => ({
         ...prev,
-        [aiUser.id]: [...(prev[aiUser.id] || []), assistantMsg],
+        [firstUser.id]: [firstAssistantMsg],
       }));
 
-      setSelectedUser(aiUser);
+      // Second character (secondCandidate) if available
+      if (secondCandidate) {
+        const secondUser: User = {
+          id: secondCandidate.id,
+          name: secondCandidate.name,
+          avatar: secondCandidate.avatar || getAvatarForUser(secondCandidate.name || 'AI'),
+          status: 'online',
+          isReal: false,
+          profile: secondCandidate.profile,
+          systemPrompt: secondCandidate.systemPrompt,
+        };
+        aiUsers.push(secondUser);
+
+        // Initialize conversation for second user with their starter message
+        const secondAssistantMsg: Message = {
+          id: Date.now() + 1,
+          sender: secondUser.name,
+          text: secondCandidate.starterMessage || 'Hello!',
+          isUserMessage: false,
+          timestamp: new Date(),
+        };
+
+        setConversations(prev => ({
+          ...prev,
+          [secondUser.id]: [secondAssistantMsg],
+        }));
+      }
+
+      // Add both AI users to the lobby
+      console.log('[Lobby] Before adding users, current allUsers:', allUsers.length);
+      setAllUsers(prev => {
+        const updated = [...prev, ...aiUsers];
+        console.log('[Lobby] After adding users, new allUsers:', updated.length, updated.map(u => u.name));
+        return updated;
+      });
+
+      // Select the first user by default
+      setSelectedUser(firstUser);
       setActiveSessionId(newSessionId);
+
+      console.log(`[Lobby] Added ${aiUsers.length} AI characters to lobby:`, aiUsers.map(u => `${u.name} (${u.profile?.modelId || 'unknown'})`));
     } catch (err) {
       console.error('createAIOpponent failed:', err);
     }
@@ -585,6 +638,9 @@ export default function Home() {
     // Case 1: AI Chat (generated persona or legacy Cute)
     if (isAIChat) {
       try {
+        // Extract modelId from character profile (full model ID string)
+        const modelId = (selectedUser as any)?.profile?.modelId || 'Qwen/Qwen2.5-7B-Instruct';
+        
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -597,6 +653,7 @@ export default function Home() {
             personaId,
             systemPrompt: clientSystemPrompt,
             opponentInfo: (selectedUser as any)?.profile || null,
+            modelId: modelId, // Pass full model ID for routing
           }),
         });
 
@@ -773,8 +830,16 @@ export default function Home() {
                   {user.isReal && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Human</span>}
                   {!user.isReal && <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">AI</span>}
                 </div>
-                {/* Profile shortTags (if provided) - same style as AI tag */}
+                {/* Display modelId as vendor tag - exact full model ID string */}
                 <div className="mt-1">
+                  {(() => {
+                    const modelId = (user as any)?.profile?.modelId;
+                    if (!modelId) return null;
+                    return (
+                      <span className="mr-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{modelId}</span>
+                    );
+                  })()}
+
                   {((user as any)?.profile?.shortTags || []).slice(0,4).map((t: string, i: number) => (
                     <span key={i} className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{t}</span>
                   ))}
@@ -809,6 +874,16 @@ export default function Home() {
                     <div className="font-semibold text-gray-800">{selectedUser.name}</div>
                     {/* Selected user shortTags */}
                     <div className="mt-1">
+                      {/* Vendor tag for AI personas (reuse same visual style) */}
+                      {(() => {
+                        const vendor = (selectedUser as any)?.profile?.modelType;
+                        if (!vendor) return null;
+                        const name = vendor === 'qwen' ? 'Qwen' : vendor === 'deepseek' ? 'DeepSeek' : vendor;
+                        return (
+                          <span className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{name}</span>
+                        );
+                      })()}
+
                       {((selectedUser as any)?.profile?.shortTags || []).slice(0,4).map((t: string, i: number) => (
                         <span key={i} className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{t}</span>
                       ))}

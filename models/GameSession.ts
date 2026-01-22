@@ -15,6 +15,7 @@ export interface IGameSession extends Document {
   isCorrect?: boolean;
   decisionTime?: Date;
   score?: number;
+  modelId?: string; // Full model ID string (e.g., 'Qwen/Qwen2.5-7B-Instruct')
 }
 
 const MessageSchema = new Schema<IMessage>({
@@ -71,6 +72,10 @@ const GameSessionSchema = new Schema<IGameSession>(
     },
     score: {
       type: Number,
+      required: false,
+    },
+    modelId: {
+      type: String,
       required: false,
     },
   },
