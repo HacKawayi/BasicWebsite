@@ -74,12 +74,8 @@ const initialMockUserProfile: UserProfile = {
   avatar: '👤',
 };
 
-// Initial mock conversations for each user
-const initialMockMessages: Record<string | number, Message[]> = {
-  '6': [
-    { id: 1, sender: 'Cute', text: 'Hi! I\'m Cute! ✨ I\'m so happy to meet you! (｡♥‿♥｡)', isUserMessage: false, timestamp: new Date() },
-  ],
-};
+// Initial mock conversations (populated dynamically from /api/match)
+const initialMockMessages: Record<string | number, Message[]> = {};
 
 export default function Home() {
   // Login & Profile State
@@ -424,9 +420,8 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversations, selectedUser]);
 
-  // Auto-create AI opponents once after login - display BOTH characters (Qwen and DeepSeek)
-  const createAIOpponent = async () => {
-    if (selectedUser) return;
+  // Shared helper: Fetch AI characters from /api/match and add to lobby
+  const fetchAndAddCharacters = async (selectMatchedOpponent: boolean = true) => {
     try {
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
       const res = await fetch('/api/match', {
@@ -441,81 +436,59 @@ export default function Home() {
       const { matchedOpponent, allCharacters } = data;
       if (!matchedOpponent) throw new Error('No matchedOpponent');
 
-      console.log('[Frontend] Raw response:', { 
-        hasMatchedOpponent: !!matchedOpponent,
-        hasAllCharacters: !!allCharacters,
-        allCharactersIsArray: Array.isArray(allCharacters),
-        allCharactersLength: allCharacters?.length,
-      });
-
-      console.log('[Frontend] Received characters:', { 
-        matched: matchedOpponent.name,
-        total: allCharacters?.length || 0,
-        names: allCharacters?.map((c: any) => c.name) || []
-      });
-
-      console.log('[Frontend] Model IDs:', {
-        matched: matchedOpponent.modelId,
-        all: allCharacters?.map((c: any) => c.modelId) || []
-      });
-
-      // Create User objects for ALL characters (one per model in DEFAULT_MODELS)
+      // Create User objects for characters
       const aiUsers: User[] = [];
-      console.log('[Lobby] Before creating AI users, allCharacters length:', allCharacters?.length);
+      const charList = selectMatchedOpponent && allCharacters ? allCharacters : [matchedOpponent];
 
-      if (allCharacters && Array.isArray(allCharacters)) {
-        console.log('[Lobby] Processing', allCharacters.length, 'characters');
-        
-        allCharacters.forEach((character: any, index: number) => {
-          console.log(`[Lobby] Processing character ${index + 1}:`, {
-            name: character.name,
-            modelId: character.modelId,
-          });
+      charList.forEach((character: any) => {
+        const aiUser: User = {
+          id: character.id,
+          name: character.name,
+          avatar: character.avatar || getAvatarForUser(character.name || 'AI'),
+          status: 'online',
+          isReal: false,
+          profile: character.profile,
+          systemPrompt: character.systemPrompt,
+        };
+        aiUsers.push(aiUser);
 
-          const aiUser: User = {
-            id: character.id,
-            name: character.name,
-            avatar: character.avatar || getAvatarForUser(character.name || 'AI'),
-            status: 'online',
-            isReal: false,
-            profile: character.profile,
-            systemPrompt: character.systemPrompt,
-          };
-          aiUsers.push(aiUser);
+        // Initialize conversation with starter message
+        const assistantMsg: Message = {
+          id: Date.now() + aiUsers.length,
+          sender: aiUser.name,
+          text: character.starterMessage || 'Hi there!',
+          isUserMessage: false,
+          timestamp: new Date(),
+        };
 
-          // Initialize conversation with starter message
-          const assistantMsg: Message = {
-            id: Date.now() + aiUsers.length,
-            sender: aiUser.name,
-            text: character.starterMessage || 'Hi there!',
-            isUserMessage: false,
-            timestamp: new Date(),
-          };
-
-          setConversations(prev => ({
-            ...prev,
-            [aiUser.id]: [assistantMsg],
-          }));
-        });
-      }
+        setConversations(prev => ({
+          ...prev,
+          [aiUser.id]: [assistantMsg],
+        }));
+      });
 
       // Add all AI users to the lobby
-      console.log('[Lobby] Before adding users, current allUsers:', allUsers.length);
-      setAllUsers(prev => {
-        const updated = [...prev, ...aiUsers];
-        console.log('[Lobby] After adding users, new allUsers:', updated.length, updated.map(u => u.name));
-        return updated;
-      });
+      setAllUsers(prev => [...prev, ...aiUsers]);
 
-      // Select the matchedOpponent (already chosen by server)
-      const selectedUser = aiUsers.find(u => u.id === matchedOpponent.id) || aiUsers[0];
-      setSelectedUser(selectedUser);
+      // Select the matchedOpponent
+      if (selectMatchedOpponent) {
+        const selectedAI = aiUsers.find(u => u.id === matchedOpponent.id) || aiUsers[0];
+        setSelectedUser(selectedAI);
+      } else {
+        setSelectedUser(aiUsers[0]);
+      }
+
       setActiveSessionId(newSessionId);
-
-      console.log(`[Lobby] Added ${aiUsers.length} AI characters to lobby:`, aiUsers.map(u => `${u.name} (${u.profile?.modelId || 'unknown'})`));
+      console.log(`[Lobby] Added ${aiUsers.length} AI character(s):`, aiUsers.map(u => u.name).join(', '));
     } catch (err) {
-      console.error('createAIOpponent failed:', err);
+      console.error('fetchAndAddCharacters failed:', err);
     }
+  };
+
+  // Auto-create AI opponents once on mount
+  const createAIOpponent = async () => {
+    if (selectedUser) return;
+    await fetchAndAddCharacters(true);
   };
 
   useEffect(() => {
@@ -558,22 +531,25 @@ export default function Home() {
         alert('Presence channel not ready. Please refresh the page.');
       }
     } else {
-      // AI user - request a generated opponent from the server and replace the fixed mock
+      // AI user - fetch a fresh generated opponent
       (async () => {
+        const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+        const res = await fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: newSessionId }),
+        });
+
+        if (!res.ok) {
+          console.error('Failed to fetch match');
+          setSelectedUser(user);
+          return;
+        }
+
         try {
-          const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
-          const res = await fetch('/api/match', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: newSessionId }),
-          });
-
-          if (!res.ok) throw new Error('Failed to fetch match');
-
           const data = await res.json();
-          const { matchedOpponent, starterMessage } = data;
-
-          if (!matchedOpponent) throw new Error('No matchedOpponent returned');
+          const { matchedOpponent } = data;
+          if (!matchedOpponent) throw new Error('No matchedOpponent');
 
           const aiUser: User = {
             id: matchedOpponent.id,
@@ -585,37 +561,35 @@ export default function Home() {
             systemPrompt: matchedOpponent.systemPrompt,
           };
 
-          // Replace existing mock Cute entry if present, otherwise append
+          // Replace or append the user
           setAllUsers(prev => {
-            const found = prev.findIndex(u => u.id === '6' || u.name === 'Cute');
+            const found = prev.findIndex(u => u.id === user.id);
             if (found !== -1) {
               const copy = [...prev];
               copy[found] = aiUser;
               return copy;
             }
-            // Append if not found
             return [...prev, aiUser];
           });
 
-          // Seed conversation with starter message
+          // Add starter message
           const assistantMsg: Message = {
             id: Date.now(),
             sender: aiUser.name,
-            text: starterMessage || '',
+            text: matchedOpponent.starterMessage || 'Hi there!',
             isUserMessage: false,
             timestamp: new Date(),
           };
 
           setConversations(prev => ({
             ...prev,
-            [aiUser.id]: [...(prev[aiUser.id] || []), assistantMsg],
+            [aiUser.id]: [assistantMsg],
           }));
 
           setSelectedUser(aiUser);
           setActiveSessionId(newSessionId);
         } catch (err) {
-          console.error('Failed to get AI match:', err);
-          // fallback: select the static user
+          console.error('Failed to process AI match:', err);
           setSelectedUser(user);
         }
       })();

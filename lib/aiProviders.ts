@@ -33,36 +33,36 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     maxOutputTokens: 300,
     temperature: 0.7,
   },
-  // {
-  //   modelId: 'deepseek-ai/DeepSeek-R1-0528',
-  //   displayName: 'DeepSeek',
-  //   maxOutputTokens: 300,
-  //   temperature: 0.7,
-  // },
+  {
+    modelId: 'deepseek-ai/DeepSeek-R1-0528',
+    displayName: 'DeepSeek',
+    maxOutputTokens: 300,
+    temperature: 0.7,
+  },
   // {
   //   modelId: 'MiniMax/MiniMax-M1-80k',
   //   displayName: 'MiniMax',
   //   maxOutputTokens: 300,
   //   temperature: 0.7,
   // },
-  // {
-  //   modelId: 'PaddlePaddle/ERNIE-4.5-0.3B-PT',
-  //   displayName: 'PaddlePaddle',
-  //   maxOutputTokens: 300,
-  //   temperature: 0.7,
-  // },
-  // {
-  //   modelId: 'ZhipuAI/GLM-4.5:ZhipuAI',
-  //   displayName: 'GLM',
-  //   maxOutputTokens: 400,
-  //   temperature: 0.7,
-  // },
   {
-      modelId: 'XiaomiMiMo/MiMo-V2-Flash',
-      displayName: 'XiaoMiMo',
-      maxOutputTokens: 300,
-      temperature: 0.7,
+    modelId: 'PaddlePaddle/ERNIE-4.5-0.3B-PT',
+    displayName: 'PaddlePaddle',
+    maxOutputTokens: 300,
+    temperature: 0.7,
   },
+  {
+    modelId: 'ZhipuAI/GLM-4.7-Flash',
+    displayName: 'GLM',
+    maxOutputTokens: 400,
+    temperature: 0.7,
+  },
+  // {
+  //     modelId: 'XiaomiMiMo/MiMo-V2-Flash',
+  //     displayName: 'XiaoMiMo',
+  //     maxOutputTokens: 300,
+  //     temperature: 0.7,
+  // },
   {
       modelId: 'Qwen/Qwen2.5-7B-Instruct-1M',
       displayName: 'Qwen',
@@ -98,12 +98,12 @@ export class AIModelProvider {
   public readonly config: ModelConfig;
   private client: ReturnType<typeof createOpenAI>;
 
-  constructor(config: ModelConfig, apiKey: string, baseUrl: string) {
+  constructor(config: ModelConfig, apiKey: string, baseURL: string) {
     this.modelId = config.modelId;
     this.config = config;
     this.client = createOpenAI({
       apiKey,
-      baseURL: baseUrl,
+      baseURL,
     });
   }
 
@@ -177,24 +177,6 @@ export class AIModelProvider {
 }
 
 /**
- * Create providers for all configured models
- * Data-driven: adding to DEFAULT_MODELS automatically creates a provider
- */
-export function createProviders(
-  models: ModelConfig[] = DEFAULT_MODELS
-): AIModelProvider[] {
-  const apiKey = process.env.MODELSCOPE_API_KEY;
-  const baseUrl = process.env.MODELSCOPE_BASE_URL;
-
-  if (!apiKey || !baseUrl) {
-    console.warn('[Providers] ModelScope credentials not configured');
-    return [];
-  }
-
-  return models.map((config) => new AIModelProvider(config, apiKey, baseUrl));
-}
-
-/**
  * Create a single provider by modelId
  */
 export function createProviderById(modelId: string): AIModelProvider | null {
@@ -203,22 +185,64 @@ export function createProviderById(modelId: string): AIModelProvider | null {
     console.warn(`[Providers] Model ${modelId} not found in DEFAULT_MODELS`);
     return null;
   }
-
-  const apiKey = process.env.MODELSCOPE_API_KEY;
-  const baseUrl = process.env.MODELSCOPE_BASE_URL;
-
-  if (!apiKey || !baseUrl) {
+  let apiKey: string | undefined;
+  let baseURL: string | undefined;
+  if(config.displayName == 'deepseek')
+  {
+    apiKey = process.env.MODELSCOPE_API_KEY;
+    baseURL = process.env.MODELSCOPE_BASE_URL;
+  }
+  else
+  {
+    apiKey = process.env.MODELSCOPE_API_KEY;
+    baseURL = process.env.MODELSCOPE_BASE_URL;
+  }
+  if (!apiKey || !baseURL) {
     console.warn('[Providers] ModelScope credentials not configured');
     return null;
   }
-
-  return new AIModelProvider(config, apiKey, baseUrl);
+  return new AIModelProvider(config, apiKey, baseURL);
 }
 
+/**
+ * Create providers for all configured models
+ * Data-driven: adding to DEFAULT_MODELS automatically creates a provider
+ */
+/*
+export function createProviders(
+  models: ModelConfig[] = DEFAULT_MODELS
+): AIModelProvider[] {
+
+ const  apiKey = process.env.MODELSCOPE_API_KEY;
+  const  baseURL = process.env.MODELSCOPE_BASE_URL;
+  
+  if (!apiKey || !baseURL) {
+    console.warn('[Providers] ModelScope credentials not configured');
+    return [];
+  }
+
+  return models.map((config) => new AIModelProvider(config, apiKey, baseURL));
+}
+*/
 /**
  * Unified character generation prompt template
  * Works for ALL models - no per-model variations
  */
+
+export const UNIFIED_CHARACTER_PROMPT = `请**严格生成一个符合以下格式的JSON角色对象**。**仅输出纯JSON，不包含任何额外说明或注释**
+
+JSON结构：{ "character": { id:number, name:string, avatar:string, status:'online', profile:{ nickname, gender, age, occupation, location, difficulty, interests[], personality, shortTags[] }, systemPrompt:string, starterMessage:string } }
+
+关键要求：
+1. 头像：**仅使用单个表情符号**（例如：🌸、🎨、🧑‍💻、☕、🚀、🌟）。禁止URL或多个表情符号。
+2. 人物性格：创造独特、令人难忘的角色。包含生活化细节（"通常"、"我觉得"）和生动个人特征。**描述必须简洁（50-80个字符）**。
+3. 难度：使用'简单'、'中等'或'困难'。'简单'角色增加轻松日常趣事；'困难'角色需更专业深度。
+4. 系统提示：用1-3段文字指导AI如何真实扮演此角色（不暴露AI身份）。包含语气、风格、简洁度要求。**必须简洁**。
+5. 开场白：1-2句话，符合角色性格。**必须简洁**。
+6. 名称/标签：简短、聊天友好关键词。禁止Markdown或特殊转义。
+每次生成需随机创建新角色。打造真实感强的个体：具体兴趣、生活细节、独特小习惯。背景、地点、性格需多样化。**所有描述保持简洁精炼**。`;
+/*
+ 
 export const UNIFIED_CHARACTER_PROMPT = `Generate exactly one character object in valid JSON. Output only pure JSON without any commentary. The format is very strictly enforced.
 
 JSON shape: { "character": { id:number, name:string, avatar:string, status:'online', profile:{ nickname, gender, age, occupation, location, difficulty, interests[], personality, shortTags[] }, systemPrompt:string, starterMessage:string } }
@@ -231,4 +255,5 @@ CRITICAL REQUIREMENTS:
 5. Starter Message: Write 1-2 sentences that match the character's personality. **Be concise.**
 6. Names/Tags: Short, chat-friendly keywords. No markdown or special escaping.
 
-Generate a unique, randomized profile each time. Make it feel like a real person with specific interests and quirks. Be creative and diverse in backgrounds, locations, and personalities.`;
+Generate a unique, randomized profile each time. Make it feel like a real person with specific interests and quirks. Be creative and diverse in backgrounds, locations, and personalities.` ;
+*/

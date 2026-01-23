@@ -65,8 +65,14 @@ export async function POST(req: NextRequest) {
 
     // Try to use ModelScope provider for the specified modelId
     if (process.env.MODELSCOPE_API_KEY && process.env.MODELSCOPE_BASE_URL) {
+    /**
+     * 其实如果我们相信我们的系统足够robust的话，完全可以不加这行 判断APIKEY和BASEURL的代码
+     * 但这是typescript
+     * encapsulated within the provider instance
+     * 我们可以在其内部处理到底要怎样的APIKEY和BASEURL
+     * */
       const provider = createProviderById(modelId);
-      
+    
       if (provider) {
         console.log(`[Chat] Using provider for model: ${modelId}`);
         

@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createProviders, UNIFIED_CHARACTER_PROMPT } from '@/lib/aiProviders';
+import { DEFAULT_MODELS , createProviderById , UNIFIED_CHARACTER_PROMPT } from '@/lib/aiProviders';
 
 type UserProfile = {
   nickname: string;
@@ -137,21 +137,38 @@ export async function POST(req: Request) {
     }
 
     // Create providers for all configured models (data-driven)
-    const providers = createProviders();
+    // const providers = createProviders();
 
-    if (providers.length === 0) {
-      console.warn('[Match] No providers available, using deterministic mock');
-      const chars = DETERMINISTIC_MOCK.characters as Character[];
-      const pickIndex = Math.floor(Math.random() * chars.length);
-      const matchedOpponent = chars[pickIndex];
-      console.log(`[Match] Mock: returning ${chars.length} characters, selected: ${matchedOpponent.name}`);
-      return NextResponse.json({ 
-        matchedOpponent, 
-        starterMessage: matchedOpponent.starterMessage,
-        allCharacters: chars 
-      });
-    }
+    // if (providers.length === 0) {
+    //   console.warn('[Match] No providers available, using deterministic mock');
+    //   const chars = DETERMINISTIC_MOCK.characters as Character[];
+    //   const pickIndex = Math.floor(Math.random() * chars.length);
+    //   const matchedOpponent = chars[pickIndex];
+    //   console.log(`[Match] Mock: returning ${chars.length} characters, selected: ${matchedOpponent.name}`);
+    //   return NextResponse.json({ 
+    //     matchedOpponent, 
+    //     starterMessage: matchedOpponent.starterMessage,
+    //     allCharacters: chars 
+    //   });
+    // }
 
+    
+    const providers = DEFAULT_MODELS
+    .map(cfg => createProviderById(cfg.modelId))
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+    /**
+     * 对 DEFAULT_MODELS 中的每个 cfg 调用一次 createProviderById(cfg.modelId)。
+createProviderById 的行为（概念上）：根据 modelId 在 DEFAULT_MODELS 中查找对应 ModelConfig，
+读取需要的凭证/端点（如从 process.env），然后返回一个 AIModelProvider 实例；
+若找不到配置或凭证缺失则返回 null。
+     */
+    /**
+     * .filter((p): p is NonNullable<typeof p> => p !== null)：
+
+filter 的回调检查每个元素 p 是否不等于 null（返回布尔值 p !== null）。
+回调使用了 TypeScript 的“类型谓词”语法 (p): p is NonNullable<typeof p>，告诉编译器“当这个回调返回 true 时，p 的类型可以被缩窄为非空（非 null/undefined）类型”。
+结果数组 providers 在类型上被认为是 AIModelProvider[]（即 null 已被过滤掉），可以安全地在后续代码中调用 provider.generate()、provider.getDisplayName() 等方法而无需额外的 null 检查。
+     */
     try {
       console.log(`[Match] Generating characters from ${providers.length} models sequentially...`);
       
@@ -161,6 +178,11 @@ export async function POST(req: Request) {
       // 串行生成角色，每次请求之间添加延迟
       for (let index = 0; index < providers.length; index++) {
         const provider = providers[index];
+    /**
+     * 这里就是在针对createProvidersById函数生成的provider进行角色生成
+     * 不需要.env.local内信息
+     * encapsulated within the provider instance
+     */
         
         try {
           const text = await provider.generate({
