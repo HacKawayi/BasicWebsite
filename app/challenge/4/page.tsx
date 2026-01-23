@@ -12,69 +12,74 @@ type GraphNode2 = {
   y: number;
 };
 
-type HistoryState = {
-  path: string[];
-  cost: number;
+type Edge = {
+  from: string;
+  to: string;
+  id: number;
 };
 
-const OPTIMAL_COST = 10;
-
 const NODES: GraphNode2[] = [
-  { id: 'START', label: 'S', x: 100, y: 200 },
   { id: 'A', label: 'A', x: 250, y: 100 },
-  { id: 'B', label: 'B', x: 250, y: 300 },
-  { id: 'C', label: 'C', x: 400, y: 150 },
-  { id: 'TARGET', label: 'T', x: 500, y: 250 },
+  { id: 'B', label: 'B', x: 400, y: 150 },
+  { id: 'C', label: 'C', x: 350, y: 300 },
+  { id: 'D', label: 'D', x: 150, y: 300 },
+  { id: 'E', label: 'E', x: 100, y: 150 },
 ];
 
-const EDGES = [
-  { from: 'START', to: 'A', weight: 4 },
-  { from: 'START', to: 'B', weight: 2 },
-  { from: 'A', to: 'C', weight: 5 },
-  { from: 'B', to: 'A', weight: 1 },
-  { from: 'B', to: 'C', weight: 8 },
-  { from: 'C', to: 'TARGET', weight: 3 },
-  { from: 'B', to: 'TARGET', weight: 10 },
+const EDGES: Edge[] = [
+  { from: 'A', to: 'B', id: 0 },
+  { from: 'A', to: 'D', id: 1 },
+  { from: 'C', to: 'D', id: 2 },
+  { from: 'D', to: 'E', id: 3 },
+  { from: 'E', to: 'A', id: 4 },
+  { from: 'A', to: 'C', id: 5 },
+  { from: 'B', to: 'D', id: 6 },
 ];
 
-export default function DijkstraLevel() {
-  const [selectedPath, setSelectedPath] = useState<string[]>(['START']);
-  const [totalCost, setTotalCost] = useState(0);
+export default function EulerianLevel() {
+  const [currentNode, setCurrentNode] = useState<string>('A');
+  const [path, setPath] = useState<string[]>(['A']);
+  const [usedEdges, setUsedEdges] = useState<number[]>([]);
   const [completed, setCompleted] = useState(false);
-  const [history, setHistory] = useState<HistoryState[]>([{ path: ['START'], cost: 0 }]);
+  const [history, setHistory] = useState<{ path: string[]; usedEdges: number[] }[]>([
+    { path: ['A'], usedEdges: [] },
+  ]);
 
   useEffect(() => {
-    if (completed && totalCost === OPTIMAL_COST) {
+    // Check if Eulerian circuit is complete
+    if (usedEdges.length === EDGES.length && currentNode === 'A' && path.length > 1) {
+      setCompleted(true);
       try {
         const completedRaw = typeof window !== 'undefined' ? localStorage.getItem('completed_levels') : null;
         const completedLevels: number[] = completedRaw ? JSON.parse(completedRaw) : [];
-        if (!completedLevels.includes(2)) {
-          completedLevels.push(2);
+        if (!completedLevels.includes(3)) {
+          completedLevels.push(3);
           localStorage.setItem('completed_levels', JSON.stringify(completedLevels));
         }
       } catch (e) {
         // ignore
       }
     }
-  }, [completed, totalCost]);
+  }, [usedEdges, currentNode, path]);
 
   const handleNodeClick = (nodeId: string) => {
     if (completed) return;
-    if (selectedPath.includes(nodeId)) return;
+    if (nodeId === currentNode) return;
 
-    const lastNode = selectedPath[selectedPath.length - 1];
-    const edge = EDGES.find((e) => e.from === lastNode && e.to === nodeId);
+    // Find an unused edge connecting current node to clicked node
+    const availableEdge = EDGES.find(
+      (e) =>
+        !usedEdges.includes(e.id) &&
+        ((e.from === currentNode && e.to === nodeId) || (e.to === currentNode && e.from === nodeId))
+    );
 
-    if (edge) {
-      const newPath = [...selectedPath, nodeId];
-      const newCost = totalCost + edge.weight;
-      setSelectedPath(newPath);
-      setTotalCost(newCost);
-      setHistory([...history, { path: newPath, cost: newCost }]);
-
-      if (nodeId === 'TARGET') {
-        setCompleted(true);
-      }
+    if (availableEdge) {
+      const newPath = [...path, nodeId];
+      const newUsedEdges = [...usedEdges, availableEdge.id];
+      setPath(newPath);
+      setUsedEdges(newUsedEdges);
+      setCurrentNode(nodeId);
+      setHistory([...history, { path: newPath, usedEdges: newUsedEdges }]);
     }
   };
 
@@ -83,49 +88,47 @@ export default function DijkstraLevel() {
     const newHistory = history.slice(0, -1);
     const lastState = newHistory[newHistory.length - 1];
     setHistory(newHistory);
-    setSelectedPath(lastState.path);
-    setTotalCost(lastState.cost);
+    setPath(lastState.path);
+    setUsedEdges(lastState.usedEdges);
+    setCurrentNode(lastState.path[lastState.path.length - 1]);
     setCompleted(false);
   };
 
   const reset = () => {
-    setSelectedPath(['START']);
-    setTotalCost(0);
+    setCurrentNode('A');
+    setPath(['A']);
+    setUsedEdges([]);
     setCompleted(false);
-    setHistory([{ path: ['START'], cost: 0 }]);
+    setHistory([{ path: ['A'], usedEdges: [] }]);
   };
 
-  const getEdgeHighlighted = (from: string, to: string) => {
-    for (let i = 0; i < selectedPath.length - 1; i++) {
-      if (selectedPath[i] === from && selectedPath[i + 1] === to) return true;
-    }
-    return false;
-  };
+  const isEdgeUsed = (edgeId: number) => usedEdges.includes(edgeId);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-red-400 to-purple-500">
+    <div className="flex h-screen bg-gradient-to-br from-purple-400 to-pink-500">
       <div className="flex-1 p-8">
         <Link href="/challenge" className="text-white/80 hover:text-white underline mb-4 inline-block">
           ← Back to Challenges
         </Link>
-        <h1 className="text-3xl font-bold text-white mb-2">Level 2: Dijkstra's Algorithm</h1>
-        <p className="text-white/90 mb-6">Find the shortest path from START (S) to TARGET (T) by selecting adjacent nodes.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Level 3: Eulerian Circuit</h1>
+        <p className="text-white/90 mb-6">
+          Find a path that visits every edge exactly once and returns to the starting node.
+        </p>
 
         <div className="bg-white rounded-xl shadow-lg p-6 mb-4 relative" style={{ height: '400px' }}>
           <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-            {EDGES.map((edge, i) => {
+            {EDGES.map((edge) => {
               const n1 = NODES.find((n) => n.id === edge.from);
               const n2 = NODES.find((n) => n.id === edge.to);
               if (!n1 || !n2) return null;
               return (
                 <GraphEdge
-                  key={i}
+                  key={edge.id}
                   x1={n1.x}
                   y1={n1.y}
                   x2={n2.x}
                   y2={n2.y}
-                  weight={edge.weight}
-                  highlighted={getEdgeHighlighted(edge.from, edge.to)}
+                  highlighted={isEdgeUsed(edge.id)}
                 />
               );
             })}
@@ -137,7 +140,7 @@ export default function DijkstraLevel() {
               label={node.label}
               x={node.x}
               y={node.y}
-              selected={selectedPath.includes(node.id)}
+              selected={node.id === currentNode}
               onClick={() => handleNodeClick(node.id)}
             />
           ))}
@@ -146,11 +149,10 @@ export default function DijkstraLevel() {
         <div className="mt-4 bg-white/20 backdrop-blur rounded-lg p-4 text-white">
           <div className="font-semibold mb-2">
             {completed
-              ? totalCost === OPTIMAL_COST
-                ? `✅ Perfect! Optimal path found with cost ${totalCost}`
-                : `Path Complete! Cost: ${totalCost} (Optimal: ${OPTIMAL_COST})`
-              : `Current Path: ${selectedPath.join(' → ')} | Cost: ${totalCost}`}
+              ? '✅ Perfect! Eulerian circuit complete!'
+              : `Current Node: ${currentNode} | Edges Used: ${usedEdges.length} / ${EDGES.length}`}
           </div>
+          <div className="text-sm mb-2">Path: {path.join(' → ')}</div>
           <div className="flex gap-2">
             <button
               onClick={handleUndo}
@@ -169,10 +171,11 @@ export default function DijkstraLevel() {
       <aside className="w-72 bg-white/10 p-6 backdrop-blur rounded-l-2xl">
         <h3 className="text-white font-bold mb-2">Instructions</h3>
         <p className="text-white/80 text-sm mb-4">
-          Click nodes adjacent to your current path. Choose the path with the smallest total weight to reach the target.
+          Click adjacent nodes to traverse edges. Use each edge exactly once and return to node A to complete the
+          circuit.
         </p>
         <div className="bg-white/20 rounded p-3 text-white text-xs">
-          <strong>Hint:</strong> The optimal path costs {OPTIMAL_COST}. Can you find it?
+          <strong>Hint:</strong> All vertices have even degree, so an Eulerian circuit exists!
         </div>
       </aside>
     </div>

@@ -61,9 +61,9 @@ export default function Homepage() {
   return (
     <div className="flex h-screen bg-gradient-to-br from-green-400 to-blue-500 flex-col md:flex-row">
       <main className="flex-1 p-8 flex flex-col justify-center">
-        <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4">TuringChat</h1>
+        <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4">HacKawayi Game</h1>
         <p className="text-white/90 text-lg md:text-xl mb-6 max-w-2xl">
-          Welcome to the Turing Test game. Start the TuringChat to challenge conversational agents and see if you can tell AI from humans.
+          Welcome to HacKawayi Game. Explore our collection of interactive games including TuringChat and Algorithm Challenges.
         </p>
 
         <div className="flex items-center gap-4">

@@ -12,6 +12,7 @@ type User = {
 
 export default function ChallengePage() {
   const [user, setUser] = useState<User>({ name: 'Guest', avatar: '👤', bio: 'Challenge Solver' });
+  const [completedLevels, setCompletedLevels] = useState<number[]>([]);
 
   useEffect(() => {
     try {
@@ -23,6 +24,12 @@ export default function ChallengePage() {
           avatar: parsed.avatar || '👤',
           bio: parsed.bio || 'Challenge Solver',
         });
+      }
+      
+      // Load completed levels from localStorage
+      const completedRaw = typeof window !== 'undefined' ? localStorage.getItem('completed_levels') : null;
+      if (completedRaw) {
+        setCompletedLevels(JSON.parse(completedRaw));
       }
     } catch (e) {
       // ignore
@@ -54,24 +61,36 @@ export default function ChallengePage() {
         </div>
 
         <div className="space-y-4">
-          {LEVELS.map((level) => (
-            <Link
-              key={level.id}
-              href={`/challenge/${level.id}`}
-              className="block bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all hover:scale-105"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xl font-bold text-gray-800">{level.title}</h3>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(level.difficulty)}`}>
-                  {level.difficulty.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-gray-600 text-sm">{level.description}</p>
-              <div className="mt-4 flex items-center text-blue-600 font-semibold text-sm">
-                Start Challenge →
-              </div>
-            </Link>
-          ))}
+          {LEVELS.map((level) => {
+            const isCompleted = completedLevels.includes(level.id);
+            return (
+              <Link
+                key={level.id}
+                href={`/challenge/${level.id}`}
+                className={`block rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all hover:scale-105 ${
+                  isCompleted ? 'bg-green-50 border-2 border-green-500' : 'bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-gray-800">{level.title}</h3>
+                    {isCompleted && (
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
+                        ✓ COMPLETED
+                      </span>
+                    )}
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(level.difficulty)}`}>
+                    {level.difficulty.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-sm">{level.description}</p>
+                <div className="mt-4 flex items-center text-blue-600 font-semibold text-sm">
+                  {isCompleted ? 'Play Again →' : 'Start Challenge →'}
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
         <div className="mt-6">
@@ -92,7 +111,13 @@ export default function ChallengePage() {
           <div className="space-y-2">
             <div className="flex justify-between text-white/90 text-xs">
               <span>Completed</span>
-              <span className="font-bold">0 / {LEVELS.length}</span>
+              <span className="font-bold">{completedLevels.length} / {LEVELS.length}</span>
+            </div>
+            <div className="w-full bg-white/30 rounded-full h-2">
+              <div 
+                className="bg-green-500 h-2 rounded-full transition-all"
+                style={{ width: `${(completedLevels.length / LEVELS.length) * 100}%` }}
+              />
             </div>
           </div>
         </div>

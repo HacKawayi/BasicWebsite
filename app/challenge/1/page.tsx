@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import GraphNode from '../components/GraphNode';
 import GraphEdge from '../components/GraphEdge';
@@ -34,6 +34,23 @@ export default function BipartiteLevel() {
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [matches, setMatches] = useState<string[][]>([]);
   const [feedback, setFeedback] = useState('');
+  const [history, setHistory] = useState<string[][][]>([[]]);
+
+  useEffect(() => {
+    // Mark as completed when player finds maximum matching
+    if (matches.length === 3) {
+      try {
+        const completedRaw = typeof window !== 'undefined' ? localStorage.getItem('completed_levels') : null;
+        const completedLevels: number[] = completedRaw ? JSON.parse(completedRaw) : [];
+        if (!completedLevels.includes(1)) {
+          completedLevels.push(1);
+          localStorage.setItem('completed_levels', JSON.stringify(completedLevels));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [matches]);
 
   const handleNodeClick = (nodeId: string) => {
     if (selectedNodes.includes(nodeId)) {
@@ -45,7 +62,9 @@ export default function BipartiteLevel() {
       if (newSelection.length === 2) {
         const edge = newSelection.sort();
         if (VALID_EDGES.some((e) => JSON.stringify(e.sort()) === JSON.stringify(edge))) {
-          setMatches([...matches, edge]);
+          const newMatches = [...matches, edge];
+          setMatches(newMatches);
+          setHistory([...history, newMatches]);
           setFeedback('✅ Valid match added!');
         } else {
           setFeedback('❌ Invalid edge. Try again.');
@@ -56,6 +75,22 @@ export default function BipartiteLevel() {
         }, 1000);
       }
     }
+  };
+
+  const handleUndo = () => {
+    if (history.length <= 1) return;
+    const newHistory = history.slice(0, -1);
+    const lastMatches = newHistory[newHistory.length - 1];
+    setHistory(newHistory);
+    setMatches(lastMatches);
+    setFeedback('');
+  };
+
+  const reset = () => {
+    setMatches([]);
+    setSelectedNodes([]);
+    setFeedback('');
+    setHistory([[]]);
   };
 
   const isMatched = (nodeId: string) => {
@@ -103,8 +138,21 @@ export default function BipartiteLevel() {
         )}
 
         <div className="mt-4 bg-white/20 backdrop-blur rounded-lg p-4 text-white">
-          <div className="font-semibold mb-1">Matches: {matches.length} / 3</div>
-          <div className="text-sm">Select nodes from Set A (left) and Set B (right) to match them.</div>
+          <div className="font-semibold mb-2">
+            {matches.length === 3 ? '✅ Perfect! Maximum matching achieved!' : `Matches: ${matches.length} / 3`}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={history.length <= 1}
+              className="px-4 py-2 bg-yellow-500 text-black rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ↶ Undo
+            </button>
+            <button onClick={reset} className="px-4 py-2 bg-white text-black rounded-lg font-semibold">
+              Reset
+            </button>
+          </div>
         </div>
       </div>
 
