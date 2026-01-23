@@ -70,6 +70,9 @@ export default function Homepage() {
           <Link href="/turingchat" className="inline-block bg-white text-black font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition">
             Start TuringChat
           </Link>
+          <Link href="/challenge" className="inline-block bg-white/80 text-black font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition">
+            Algorithm Challenges
+          </Link>
         </div>
 
         {/* Login / Guest UI */}

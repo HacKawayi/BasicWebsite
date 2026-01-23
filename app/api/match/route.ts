@@ -156,7 +156,7 @@ export async function POST(req: Request) {
       console.log(`[Match] Generating characters from ${providers.length} models sequentially...`);
       
       const characters: Character[] = [];
-      const REQUEST_DELAY_MS = 170000; // 请求间隔 170 秒
+      const REQUEST_DELAY_MS = 10000; // 请求间隔 10 秒
 
       // 串行生成角色，每次请求之间添加延迟
       for (let index = 0; index < providers.length; index++) {
