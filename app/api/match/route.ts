@@ -1,6 +1,13 @@
+/**
+ * Character Matching Endpoint - Data-Driven Architecture
+ * 
+ * Generates one character per configured model in DEFAULT_MODELS.
+ * Adding a model to aiProviders.ts automatically creates a character for it.
+ * No conditional logic based on model names.
+ */
+
 import { NextResponse } from 'next/server';
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { DEFAULT_MODELS , createProviderById , UNIFIED_CHARACTER_PROMPT } from '@/lib/aiProviders';
 
 type UserProfile = {
   nickname: string;
@@ -12,6 +19,8 @@ type UserProfile = {
   interests: string[];
   personality: string;
   shortTags: string[];
+  modelId: string; // Full model ID string (e.g., 'Qwen/Qwen2.5-7B-Instruct')
+  modelDisplayName?: string; // Optional human-friendly display name (e.g., 'Qwen')
 };
 
 type Character = {
@@ -22,15 +31,9 @@ type Character = {
   profile: UserProfile;
   systemPrompt: string;
   starterMessage: string;
+  modelId: string; // Full model ID string
+  modelDisplayName?: string; // Optional human-friendly name
 };
-
-const MODELSCOPE_PROMPT = `Generate exactly two character objects and starter messages in valid JSON, and nothing else. Output must be pure JSON without commentary. The JSON shape must be: { "characters": [ { id:number, name:string, avatar:string, status:'online', profile:{ nickname, gender, age, occupation, location, difficulty, interests[], personality, shortTags[] }, systemPrompt:string, starterMessage:string }, { ... } ] }
-
-CRITICAL: For avatar field, use a SINGLE EMOJI (like 🌸, ☀️, 🐎, 🎨, ☕, 🚀, 🧑‍💻, 🎭, etc). Never use URLs or emoji codes. Pick emoji that matches the character's personality/interests/occupation.
-
-One character must be 'easy' and include human-style hedges ("I usually...", "sometimes I...") and vivid personal details. The other should be 'hard' (or 'medium' for variety) and be more concise, highly coherent, and slightly less mundane in personal detail. Use difficulty values 'easy'|'medium'|'hard' inside profile.difficulty.
-
-System prompts must be 1-3 short paragraphs instructing the assistant how to roleplay the character (tone, verbosity, whether to hide AI identity). starterMessage must be 1-2 sentences consistent with that prompt. Interests and shortTags should be short keywords. Names/nicknames should be short and chat-friendly. Ensure all strings are plain text (no markdown or extra escaping). Generate randomized, unique profiles each time—never use fixed examples.`;
 
 const DETERMINISTIC_MOCK = {
   characters: [
@@ -49,10 +52,12 @@ const DETERMINISTIC_MOCK = {
         interests: ['product design', 'coffee', 'podcasts'],
         personality: 'curious, thoughtful, concise',
         shortTags: ['UX', 'Taipei', 'creative'],
+        modelId: 'Qwen/Qwen2.5-7B-Instruct',
       },
       systemPrompt:
         'You are Mika, a Taipei-based UX Designer. Roleplay as Mika: be curious, give concise thoughtful replies, occasionally refer to design processes. Avoid revealing you are an AI. Keep replies short (1–3 sentences).',
       starterMessage: "Hi! I'm Mika — I love talking about product design and coffee. What are you working on these days?",
+      modelId: 'Qwen/Qwen2.5-7B-Instruct',
     },
     {
       id: Number(Date.now().toString().slice(-6)) + 2,
@@ -69,51 +74,15 @@ const DETERMINISTIC_MOCK = {
         interests: ['distributed systems', 'automation', 'latency'],
         personality: 'precise, analytical, minimally verbose',
         shortTags: ['Data', 'Engineer'],
+        modelId: 'deepseek-ai/DeepSeek-R1-0528',
       },
       systemPrompt:
         'You are Ari, a data engineer. Roleplay as Ari: be precise, concise, and technically coherent. Provide clear, factual replies. Avoid unnecessary small talk. Keep responses brief (1–2 sentences).',
       starterMessage: 'Hello. I focus on data pipelines and latency optimization. How can I help?',
+      modelId: 'deepseek-ai/DeepSeek-R1-0528',
     },
   ],
 };
-
-async function tryParseJSONFromText(text: string): Promise<any | null> {
-  if (!text) return null;
-  
-  // Try direct parse first
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    // Try to find the first { and last } and parse that substring
-    const first = text.indexOf('{');
-    const last = text.lastIndexOf('}');
-    if (first !== -1 && last !== -1 && last > first) {
-      const sub = text.slice(first, last + 1);
-      try {
-        return JSON.parse(sub);
-      } catch (e2) {
-        // Attempt to isolate array (if response is [ ... ])
-        const firstBracket = text.indexOf('[');
-        const lastBracket = text.lastIndexOf(']');
-        if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-          try {
-            const arrayPart = text.slice(firstBracket, lastBracket + 1);
-            // Wrap in object if needed
-            const wrapped = JSON.parse(arrayPart);
-            if (Array.isArray(wrapped)) {
-              return { characters: wrapped };
-            }
-            return wrapped;
-          } catch (e3) {
-            // ignore
-          }
-        }
-        return null;
-      }
-    }
-    return null;
-  }
-}
 
 function pickEmoji(avatar: any, profile: any, name?: string): string {
   const s = (avatar ?? '').toString().trim();
@@ -167,36 +136,74 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
-    // If MODELSCOPE credentials are present, use generateText like the chat route does
-    if (process.env.MODELSCOPE_API_KEY && process.env.MODELSCOPE_BASE_URL) {
-      try {
-        const modelScopeClient = createOpenAI({
-          apiKey: process.env.MODELSCOPE_API_KEY,
-          baseURL: process.env.MODELSCOPE_BASE_URL,
-        });
+    // Create providers for all configured models (data-driven)
+    // const providers = createProviders();
 
-        const modelName = process.env.MODELSCOPE_MODEL || 'Qwen/Qwen2.5-7B-Instruct';
-        const model = modelScopeClient.chat(modelName);
+    // if (providers.length === 0) {
+    //   console.warn('[Match] No providers available, using deterministic mock');
+    //   const chars = DETERMINISTIC_MOCK.characters as Character[];
+    //   const pickIndex = Math.floor(Math.random() * chars.length);
+    //   const matchedOpponent = chars[pickIndex];
+    //   console.log(`[Match] Mock: returning ${chars.length} characters, selected: ${matchedOpponent.name}`);
+    //   return NextResponse.json({ 
+    //     matchedOpponent, 
+    //     starterMessage: matchedOpponent.starterMessage,
+    //     allCharacters: chars 
+    //   });
+    // }
 
-        // Use generateText (same as chat route, but non-streaming)
-        const { text } = await generateText({
-          model,
-          prompt: MODELSCOPE_PROMPT,
-          temperature: 0.7,
-          maxOutputTokens: 800,
-        });
+    
+    const providers = DEFAULT_MODELS
+    .map(cfg => createProviderById(cfg.modelId))
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+    /**
+     * 对 DEFAULT_MODELS 中的每个 cfg 调用一次 createProviderById(cfg.modelId)。
+createProviderById 的行为（概念上）：根据 modelId 在 DEFAULT_MODELS 中查找对应 ModelConfig，
+读取需要的凭证/端点（如从 process.env），然后返回一个 AIModelProvider 实例；
+若找不到配置或凭证缺失则返回 null。
+     */
+    /**
+     * .filter((p): p is NonNullable<typeof p> => p !== null)：
 
-        if (text) {
-          console.log('MODELSCOPE response received, attempting to parse JSON');
-          const parsed = await tryParseJSONFromText(text);
-          if (parsed && Array.isArray(parsed.characters) && parsed.characters.length >= 2) {
-            const characters: Character[] = parsed.characters.map((c: any, idx: number) => ({
-              id: Number(c.id) || Number(Date.now().toString().slice(-6)) + idx,
-              name: String(c.name || c.profile?.nickname || `User${idx + 1}`),
+filter 的回调检查每个元素 p 是否不等于 null（返回布尔值 p !== null）。
+回调使用了 TypeScript 的“类型谓词”语法 (p): p is NonNullable<typeof p>，告诉编译器“当这个回调返回 true 时，p 的类型可以被缩窄为非空（非 null/undefined）类型”。
+结果数组 providers 在类型上被认为是 AIModelProvider[]（即 null 已被过滤掉），可以安全地在后续代码中调用 provider.generate()、provider.getDisplayName() 等方法而无需额外的 null 检查。
+     */
+    try {
+      console.log(`[Match] Generating characters from ${providers.length} models sequentially...`);
+      
+      const characters: Character[] = [];
+      const REQUEST_DELAY_MS = 10000; // 请求间隔 10 秒
+
+      // 串行生成角色，每次请求之间添加延迟
+      for (let index = 0; index < providers.length; index++) {
+        const provider = providers[index];
+    /**
+     * 这里就是在针对createProvidersById函数生成的provider进行角色生成
+     * 不需要.env.local内信息
+     * encapsulated within the provider instance
+     */
+        
+        try {
+          const text = await provider.generate({
+            system: 'You are a character generator. Output only valid JSON.',
+            messages: [],
+            prompt: UNIFIED_CHARACTER_PROMPT,
+          });
+
+          console.log(`[${provider.getDisplayName()}] Raw response length: ${text.length}`);
+          const parsed = tryParseJSONFromText(text);
+          
+          if (parsed && parsed.character) {
+            const c = parsed.character;
+            const modelDisplayName = provider.getDisplayName();
+            characters.push({
+              id: Number(c.id) || Number(Date.now().toString().slice(-6)) + index,
+              name: String(c.name || c.profile?.nickname || modelDisplayName),
               avatar: pickEmoji(c.avatar, c.profile, String(c.name || c.profile?.nickname)),
               status: 'online',
               profile: {
-                nickname: String(c.profile?.nickname || c.name || `User${idx + 1}`),
+                nickname: String(c.profile?.nickname || c.name || modelDisplayName),
                 gender: String(c.profile?.gender || 'unknown'),
                 age: Number(c.profile?.age || 30),
                 occupation: String(c.profile?.occupation || 'unknown'),
@@ -205,41 +212,154 @@ export async function POST(req: Request) {
                 interests: Array.isArray(c.profile?.interests) ? c.profile.interests.slice(0, 6) : [],
                 personality: String(c.profile?.personality || ''),
                 shortTags: Array.isArray(c.profile?.shortTags) ? c.profile.shortTags.slice(0, 4) : [],
+                modelId: provider.modelId,
+                modelDisplayName: modelDisplayName,
               },
               systemPrompt: String(c.systemPrompt || ''),
               starterMessage: String(c.starterMessage || ''),
-            }));
-
-            // Randomly pick one of the two characters to be the matched opponent
-            const pickIndex = Math.random() < 0.5 ? 0 : 1;
-            const matchedOpponent = characters[pickIndex];
-            const secondCandidate = characters[1 - pickIndex];
-
-            console.log('Successfully generated characters from MODELSCOPE');
-            return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
+              modelId: provider.modelId,
+              modelDisplayName: modelDisplayName,
+            });
+            console.log(`[${provider.getDisplayName()}] Character generated: ${characters[characters.length - 1].name}`);
           } else {
-            console.warn('MODELSCOPE response does not contain valid character data. Raw text:', text?.substring(0, 200));
+            console.warn(`[${provider.getDisplayName()}] Failed to parse character from response`);
+            console.log(`[${provider.getDisplayName()}] Raw response snippet: ${text.substring(0, 1000)}...`);
           }
+        } catch (error) {
+          console.error(`[${provider.getDisplayName()}] Generation failed:`, error);
         }
 
-        console.warn('MODELSCOPE returned empty response, falling back to deterministic mock');
-      } catch (err) {
-        console.error('MODELSCOPE call failed:', err);
-        console.warn('Falling back to deterministic mock');
+        // 添加请求间隔（最后一个请求后不需要延迟）
+        if (index < providers.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
+        }
       }
+      
+      console.log(`[Match] Total characters successfully generated: ${characters.length}`);
+
+      // Return all generated characters (one per model in DEFAULT_MODELS)
+      if (characters.length > 0) {
+        // Randomly select one as the matched opponent
+        const pickIndex = Math.floor(Math.random() * characters.length);
+        const matchedOpponent = characters[pickIndex];
+
+        console.log(`[Match] Generated ${characters.length} characters, selected: ${matchedOpponent.name} (${matchedOpponent.modelId})`);
+        
+        // Return all characters plus the randomly selected matchedOpponent
+        return NextResponse.json({ 
+          matchedOpponent, 
+          starterMessage: matchedOpponent.starterMessage,
+          allCharacters: characters // Include all generated characters
+        });
+      } else {
+        console.warn('[Match] No characters generated, falling back to deterministic mock');
+      }
+    } catch (err) {
+      console.error('[Match] Character generation failed:', err);
     }
 
-    // Fallback deterministic mock (always return HTTP 200 with JSON)
-    console.log('Using deterministic mock for character generation');
+    // Fallback deterministic mock
+    console.log('[Match] Using deterministic mock for character generation');
     const chars = DETERMINISTIC_MOCK.characters as Character[];
-    const matchedOpponent = chars[0];
-    const secondCandidate = chars[1];
+    // Ensure mock characters include modelDisplayName for UI
+    const mappedChars = chars.map((c) => ({
+      ...c,
+      modelDisplayName:
+        c.profile?.modelId === 'Qwen/Qwen2.5-7B-Instruct'
+          ? 'Qwen'
+          : c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
+          ? 'DeepSeek'
+          : c.profile?.modelId || c.modelId,
+      profile: {
+        ...(c.profile || {}),
+        modelDisplayName:
+          c.profile?.modelId === 'Qwen/Qwen2.5-7B-Instruct'
+            ? 'Qwen'
+            : c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
+            ? 'DeepSeek'
+            : c.profile?.modelId || c.modelId,
+      },
+    }));
 
-    return NextResponse.json({ matchedOpponent, starterMessage: matchedOpponent.starterMessage, secondCandidate });
+    const pickIndex = Math.floor(Math.random() * mappedChars.length);
+    const matchedOpponent = mappedChars[pickIndex];
+
+    return NextResponse.json({ 
+      matchedOpponent, 
+      starterMessage: matchedOpponent.starterMessage,
+      allCharacters: mappedChars // Return all mock characters
+    });
   } catch (error) {
-    console.error('Error in /api/match:', error);
+    console.error('[Match] Error in /api/match:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+function tryParseJSONFromText(text: string): any | null {
+  if (!text) return null;
+  
+  // First, try to parse the entire text as JSON
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    // If that fails, try to extract JSON from the text
+  }
+
+  // Try to find JSON markers (e.g., ```json ... ```)
+  const markerRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i;
+  const markerMatch = text.match(markerRegex);
+  if (markerMatch) {
+    try {
+      return JSON.parse(markerMatch[1]);
+    } catch (e) {
+      // Continue to next method
+    }
+  }
+
+  // Try to find the first balanced JSON object
+  const firstBrace = text.indexOf('{');
+  if (firstBrace !== -1) {
+    let braceCount = 0;
+    let endBrace = -1;
+    for (let i = firstBrace; i < text.length; i++) {
+      if (text[i] === '{') {
+        braceCount++;
+      } else if (text[i] === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          endBrace = i;
+          break;
+        }
+      }
+    }
+    if (endBrace !== -1) {
+      const jsonCandidate = text.slice(firstBrace, endBrace + 1);
+      try {
+        return JSON.parse(jsonCandidate);
+      } catch (e) {
+        // Try replacing single quotes with double quotes
+        try {
+          const fixedJson = jsonCandidate.replace(/'/g, '"');
+          return JSON.parse(fixedJson);
+        } catch (e2) {
+          // Continue
+        }
+      }
+    }
+  }
+
+  // Last resort: try the original method (first { to last })
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    try {
+      return JSON.parse(text.slice(first, last + 1));
+    } catch (e2) {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export const runtime = 'edge';
