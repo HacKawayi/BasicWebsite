@@ -121,6 +121,29 @@ export default function Home() {
     setIsLoggedIn(true);
   };
 
+  // Restore login from localStorage (supports guest or logged-in users)
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('turing_user') : null;
+      if (raw) {
+        const p = JSON.parse(raw);
+        setUserName(p.name || '');
+        setUserProfile({
+          ...initialMockUserProfile,
+          name: p.name || initialMockUserProfile.name,
+          avatar: p.avatar || initialMockUserProfile.avatar,
+          bio: p.bio || initialMockUserProfile.bio,
+        });
+        setIsLoggedIn(true);
+      } else {
+        // Guest by default; leave isLoggedIn false so Pusher is not attempted
+        setIsLoggedIn(false);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   // Pusher Presence Channel for real-time user discovery
   useEffect(() => {
     if (!isLoggedIn || !userName) return;
@@ -496,12 +519,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (isLoggedIn && !selectedUser) {
+    if (!selectedUser) {
       createAIOpponent();
     }
-    // only run when login status changes
+    // run once on mount (create AI opponents for guest or logged-in users)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  }, []);
 
   // Handle user selection
   const handleUserClick = (user: User) => {
@@ -738,43 +761,7 @@ export default function Home() {
   // Get current conversation
   const currentMessages = selectedUser ? conversations[selectedUser.id] || [] : [];
 
-  // Login Screen
-  if (!isLoggedIn) {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 items-center justify-center">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4">
-          <div className="text-center mb-6">
-            <div className="text-6xl mb-4">🎭</div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Turing Test Game</h1>
-            <p className="text-gray-600">Enter your name to join the lobby</p>
-          </div>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const input = (e.target as HTMLFormElement).elements.namedItem('username') as HTMLInputElement;
-            handleLogin(input.value);
-          }}>
-            <input
-              type="text"
-              name="username"
-              placeholder="Your Name"
-              className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-              autoFocus
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
-            >
-              Join Lobby
-            </button>
-          </form>
-          <p className="text-xs text-gray-500 mt-4 text-center">
-            No authentication required • Symbolic login for testing
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex h-screen bg-gray-50">
