@@ -187,6 +187,12 @@ export function createProviderById(modelId: string): AIModelProvider | null {
   }
   let apiKey: string | undefined;
   let baseURL: string | undefined;
+  /**
+   * 在这里增加
+   * APIKEY
+   * BASEURL
+   * 的多样化配置
+   *  */
   if(config.displayName == 'deepseek')
   {
     apiKey = process.env.MODELSCOPE_API_KEY;
