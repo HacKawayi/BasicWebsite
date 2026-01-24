@@ -99,7 +99,7 @@ export default function TSPLevel() {
         <Link href="/challenge" className="text-white/80 hover:text-white underline mb-4 inline-block">
           ← Back to Challenges
         </Link>
-        <Link href="/" className="text-white/80 hover:text-white underline mb-4 inline-block turingchat-back-to-homepage">
+        <Link href="/" className="text-white/80 hover:text-white underline mb-4 inline-block algorithmchallenges-back-to-homepage">
           ← Back to Homepage
         </Link>
         <h1 className="text-3xl font-bold text-white mb-2">Level 5: Traveling Salesman Problem</h1>
