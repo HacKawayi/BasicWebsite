@@ -792,9 +792,9 @@ export default function Home() {
             <h2 className="text-xl font-bold">💬 Chat Lobby</h2>
             <p className="text-sm text-blue-100">Select a user to start chatting</p>
           </div>
-          <Link href="/" className="inline-flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-full text-sm font-medium" title="回大厅">
+          <Link href="/" className="inline-flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-full text-sm font-medium" title="Back to homepage">
             <span className="text-lg">🏠</span>
-            Back to homepage
+            Back to Homepage
           </Link>
         </div>
 

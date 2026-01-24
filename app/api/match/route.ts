@@ -153,9 +153,17 @@ export async function POST(req: Request) {
     // }
 
     
+    // Deduplicate by modelId to avoid calling the same model twice when multiple variants
+    // or duplicate entries are present in DEFAULT_MODELS (e.g., two Qwen entries)
+    const uniqueModelIds = new Set<string>();
     const providers = DEFAULT_MODELS
-    .map(cfg => createProviderById(cfg.modelId))
-    .filter((p): p is NonNullable<typeof p> => p !== null);
+      .filter(cfg => {
+        if (uniqueModelIds.has(cfg.modelId)) return false;
+        uniqueModelIds.add(cfg.modelId);
+        return true;
+      })
+      .map(cfg => createProviderById(cfg.modelId))
+      .filter((p): p is NonNullable<typeof p> => p !== null);
     /**
      * 对 DEFAULT_MODELS 中的每个 cfg 调用一次 createProviderById(cfg.modelId)。
 createProviderById 的行为（概念上）：根据 modelId 在 DEFAULT_MODELS 中查找对应 ModelConfig，
@@ -228,7 +236,7 @@ filter 的回调检查每个元素 p 是否不等于 null（返回布尔值 p !=
         } catch (error) {
           console.error(`[${provider.getDisplayName()}] Generation failed:`, error);
         }
-
+        
         // 添加请求间隔（最后一个请求后不需要延迟）
         if (index < providers.length - 1) {
           await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
