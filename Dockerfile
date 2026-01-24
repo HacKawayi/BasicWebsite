@@ -1,26 +1,15 @@
-# Use the official Node.js image as the base image
 FROM node:18-alpine
 
-# Set the working directory
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy the rest of the application code
 COPY . .
 
-# Build the Next.js application
-RUN npm run build
+# 删除构建步骤 - 不要在Docker构建阶段构建Next.js
+# RUN npm run build  # ❌ 删除这行
 
-# Expose the port that ModelScope requires
 EXPOSE 7860
-
-# Set the environment variable for the port
 ENV PORT=7860
 
-# Start the application
-CMD ["npm", "start"]
+# 改为在运行时构建和启动
+CMD ["sh", "-c", "npm run build && npm start"]
