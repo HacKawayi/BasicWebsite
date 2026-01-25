@@ -111,16 +111,5 @@
   - 若为人类对话（或需要广播消息），客户端通过 `/api/talk` 将消息触发到 Pusher 实时频道，其他客户端监听此频道。
   - 玩家通过 `/api/game/submit` 提交“AI/人类”猜测，后端基于会话信息计算 `score` 并返回结果。
 
-  **部署与注意事项**
-  - 若使用 ModelScope 或其他私有模型服务，请确保 `MODELSCOPE_API_KEY` 与 `MODELSCOPE_BASE_URL` 正确设置，且 `lib/aiProviders.ts` 中的 `createProviderById` 能找到对应配置。
-  - 若不使用 MongoDB，可不设置 `MONGODB_URI`；系统在未配置时会跳过写入步骤（并在日志中提醒）。
-  - Pusher 相关必须在部署环境中提供正确凭证，否则实时功能不可用。
-
+ 
   ---
-
-  如果你需要，我可以：
-  - 生成更详细的时序图或流程图（Mermaid 或 PNG/SVG）。
-  - 把 README 中的 Mermaid 转成图片并放到 `log/` 或 `public/` 下。
-  - 根据你的部署目标（Vercel / Docker）补充部署步骤。
-
-  请告诉我你想先做哪项。 
