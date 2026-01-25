@@ -43,22 +43,22 @@
 
   ```mermaid
   flowchart TD
-    Client[客户端 (Next.js 页面)] -->|HTTP / API| Match[/api/match]
-    Client -->|HTTP / Stream| Chat[/api/chat]
-    Client -->|HTTP| Session[/api/session]
-    Client -->|HTTP| GameInit[/api/game/init]
-    Client -->|HTTP| GameSubmit[/api/game/submit]
-    Client -->|Pusher| PusherAuth[/api/pusher/auth]
-    Client -->|Pusher| Talk[/api/talk]
+    Client["客户端 (Next.js 页面)"] -->|HTTP / API| Match["/api/match"]
+    Client -->|HTTP / Stream| Chat["/api/chat"]
+    Client -->|HTTP| Session["/api/session"]
+    Client -->|HTTP| GameInit["/api/game/init"]
+    Client -->|HTTP| GameSubmit["/api/game/submit"]
+    Client -->|Pusher| PusherAuth["/api/pusher/auth"]
+    Client -->|Pusher| Talk["/api/talk"]
 
-    Match -->|调用 provider.generate| AIProviders[(AI Model Providers)]
+    Match -->|调用 provider.generate| AIProviders["(AI Model Providers)"]
     Chat -->|调用 provider.stream 或 OpenAI| AIProviders
-    AIProviders -->|请求模型| ExternalModels[(ModelScope / OpenAI)]
+    AIProviders -->|请求模型| ExternalModels["(ModelScope / OpenAI)"]
 
-    Chat -->|onFinish 写入| Mongo[(MongoDB via lib/db & models/GameSession)]
+    Chat -->|onFinish 写入| Mongo["(MongoDB via lib/db & models/GameSession)"]
     GameInit --> Mongo
     GameSubmit --> Mongo
-    Talk -->|trigger| PusherService[(Pusher CDN)]
+    Talk -->|trigger| PusherService["(Pusher CDN)"]
     PusherAuth -->|authorize| PusherService
 
     style Mongo fill:#f9f,stroke:#333,stroke-width:1px
