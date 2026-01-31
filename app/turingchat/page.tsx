@@ -1,18 +1,103 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import Pusher from 'pusher-js';
+
+// ========== CSS & Animations (The Engine) ==========
+const styles = `
+  @keyframes star-fly {
+    from { transform: translateY(0); }
+    to { transform: translateY(100vh); }
+  }
+  @keyframes planet-rise {
+    from { transform: translateY(100%) scale(0.8); }
+    to { transform: translateY(20%) scale(1.5); }
+  }
+  @keyframes shake-hard {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-3px, 3px) rotate(-1deg); }
+    40% { transform: translate(3px, -3px) rotate(1deg); }
+    60% { transform: translate(-3px, -3px) rotate(0deg); }
+    80% { transform: translate(3px, 3px) rotate(-1deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+  @keyframes smoke-rise {
+    0% { transform: translateY(0) scale(1); opacity: 0.8; }
+    100% { transform: translateY(-150px) scale(2); opacity: 0; }
+  }
+  @keyframes ember-fly {
+    0% { transform: translateY(0) translateX(0); opacity: 1; }
+    100% { transform: translateY(-200px) translateX(50px); opacity: 0; }
+  }
+  @keyframes blink-red {
+    0%, 100% { background-color: rgba(239, 68, 68, 0.1); }
+    50% { background-color: rgba(239, 68, 68, 0.5); }
+  }
+  .pixel-art { image-rendering: pixelated; }
+  .scanlines {
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+    background-size: 100% 4px;
+  }
+  /* Custom Scrollbar for Punk Look */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+`;
+
+// ========== CUSTOM AVATAR COMPONENTS ==========
+const PixelAvatarAri = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className || "w-full h-full"} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="24" height="24" fill="#1e293b"/>
+    <rect x="7" y="8" width="10" height="12" fill="#d4a373"/>
+    <rect x="6" y="10" width="1" height="4" fill="#d4a373"/>
+    <rect x="17" y="10" width="1" height="4" fill="#d4a373"/>
+    <path d="M6 5h12v3h1v2h-1v-1h-1v-1h-2v1h-2v-1h-2v1h-2v-1h-1v1h-1v1h-1v-2h1v-3z" fill="#8d5524"/>
+    <rect x="5" y="6" width="1" height="4" fill="#8d5524"/>
+    <rect x="7" y="11" width="4" height="3" fill="#334155"/>
+    <rect x="8" y="12" width="2" height="1" fill="#0ea5e9"/>
+    <rect x="13" y="11" width="4" height="3" fill="#334155"/>
+    <rect x="14" y="12" width="2" height="1" fill="#0ea5e9"/>
+    <rect x="11" y="12" width="2" height="1" fill="#1e293b"/>
+    <rect x="15" y="16" width="4" height="1" fill="#10b981"/>
+    <rect x="5" y="20" width="14" height="4" fill="#ea580c"/>
+  </svg>
+);
+
+const PixelAvatarMika = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className || "w-full h-full"} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="24" height="24" fill="#1e293b"/>
+    <rect x="8" y="9" width="8" height="10" fill="#fec5bb"/>
+    <path d="M7 4h10v5h1v4h-1v2h-1v3h-1v-3h-1v-2h-4v2h-1v3h-1v-3h-1v-2h-1v-4h1v-5z" fill="#2e1065"/>
+    <rect x="9" y="12" width="2" height="2" fill="#1e293b"/>
+    <rect x="13" y="12" width="2" height="2" fill="#1e293b"/>
+    <rect x="9" y="3" width="6" height="3" fill="#f8fafc"/>
+    <rect x="11" y="4" width="2" height="1" fill="#ef4444"/>
+    <rect x="11.5" y="3.5" width="1" height="2" fill="#ef4444"/>
+    <rect x="13" y="11" width="3" height="3" fill="rgba(45, 212, 191, 0.4)"/>
+    <rect x="15" y="12" width="1" height="1" fill="#2dd4bf"/>
+    <rect x="6" y="19" width="12" height="5" fill="#f8fafc"/>
+  </svg>
+);
+
+// Helper to assign a pixel avatar based on user name/ID
+const getPixelAvatar = (user: User) => {
+  const seed = (typeof user.id === 'string' ? user.id.length : user.id) + user.name.length;
+  return seed % 2 === 0 ? <PixelAvatarAri /> : <PixelAvatarMika />;
+};
 
 // ========== TypeScript Interfaces ==========
 interface User {
   id: string | number;
   name: string;
-  avatar: string;
   status: 'online' | 'offline';
-  isReal?: boolean; // New: true for real presence users, false/undefined for mock AI
-  profile?: any; // optional profile object for AI-generated opponents
-  systemPrompt?: string; // optional system prompt for AI personas
+  isReal?: boolean;
+  profile?: any;
+  systemPrompt?: string;
 }
 
 interface Message {
@@ -23,1065 +108,868 @@ interface Message {
   timestamp: Date;
 }
 
-interface UserProfile {
-  name: string;
-  email: string;
-  bio: string;
-  joinDate: string;
-  avatar: string;
-}
-
-interface PresenceMember {
-  id: string;
-  info: {
-    name: string;
-  };
-}
-
-// Invite object used for pending invitations
 interface Invite {
   fromUser: string;
   targetUser: string;
   sessionId: string;
   timestamp?: number;
-} 
+  tags?: string[];
+}
 
-// ========== Mock Data ==========
-// Start with no fixed AI mock; we'll auto-create an AI opponent after login
-const mockUsers: User[] = [
-  // Note: Real human users will be added dynamically via Presence
-];
-
-const getAvatarForUser = (name: string) => {
-  const avatars = ['👤', '🧑', '👨', '👩', '🧔', '👱', '🧑‍💼', '👨‍💻', '👩‍🔬'];
-  // Simple deterministic hash
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatars[Math.abs(hash) % avatars.length];
+// Helper: Get random 1-4 tags from AI profile
+const getRandomTags = (profile: any): string[] => {
+  const allTags: string[] = [];
+  if (profile?.shortTags) allTags.push(...profile.shortTags);
+  if (profile?.interests) allTags.push(...profile.interests);
+  if (profile?.personality) allTags.push(profile.personality);
+  if (profile?.occupation) allTags.push(profile.occupation);
+  if (allTags.length === 0) return ['mysterious'];
+  const shuffled = allTags.sort(() => Math.random() - 0.5);
+  const count = Math.floor(Math.random() * 4) + 1; // 1-4 tags
+  return shuffled.slice(0, count);
 };
 
-const getRandomAvatar = () => {
-  const avatars = ['👤', '🧑', '👨', '👩', '🧔', '👱', '🧑‍💼', '👨‍💻', '👩‍🔬'];
-  return avatars[Math.floor(Math.random() * avatars.length)];
-};
-
-const initialMockUserProfile: UserProfile = {
-  name: 'Guest',
-  email: '',
-  bio: 'Turing Test Participant',
-  joinDate: 'January 2024',
-  avatar: '👤',
-};
-
-// Initial mock conversations (populated dynamically from /api/match)
-const initialMockMessages: Record<string | number, Message[]> = {};
-
+// ========== Main Component ==========
 export default function Home() {
-  // Login & Profile State
+  // --- Visual State ---
+  const [appState, setAppState] = useState<'intro1' | 'intro2' | 'selection' | 'chat'>('intro1');
+  const [gameState, setGameState] = useState<'playing' | 'analyzing' | 'judging' | 'result'>('playing');
+  const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
+  
+  // --- Logic State (Existing) ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
-  const [userProfile, setUserProfile] = useState<UserProfile>(initialMockUserProfile);
-  
-  // Chat State
-  const [allUsers, setAllUsers] = useState<User[]>(mockUsers);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [conversations, setConversations] = useState<Record<string | number, Message[]>>(initialMockMessages);
+  const [conversations, setConversations] = useState<Record<string | number, Message[]>>({});
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
-
-  // Incoming invite handling
-  const [pendingInvites, setPendingInvites] = useState<Invite[]>([]);
-  const [activeInvite, setActiveInvite] = useState<Invite | null>(null);
   
+  // --- Invites ---
+  const [activeInvite, setActiveInvite] = useState<Invite | null>(null);
+  const [waitingForAccept, setWaitingForAccept] = useState<string | null>(null); // Show "waiting" UI
+  const [aiHandshakeUser, setAiHandshakeUser] = useState<string | null>(null);
+  
+  // --- User Tags ---
+  const [userTags, setUserTags] = useState<string[]>([]); // Player's own tags
+  const [tagInput, setTagInput] = useState(''); // Input field for adding tags
+  const [opponentTags, setOpponentTags] = useState<string[]>([]); // Tags to show in chat
+  
+  // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
-  const presenceChannelRef = useRef<any>(null);
   const allUsersRef = useRef<User[]>(allUsers);
+  const aiHandshakeTimerRef = useRef<number | null>(null);
+  const hasSignaledJudgingRef = useRef(false);
+  const MESSAGE_THRESHOLD = 5; // Trigger judgment after 5 messages from opponent
 
   // Keep ref in sync
+  useEffect(() => { allUsersRef.current = allUsers; }, [allUsers]);
   useEffect(() => {
-    allUsersRef.current = allUsers;
-  }, [allUsers]);
+    return () => {
+      if (aiHandshakeTimerRef.current) {
+        window.clearTimeout(aiHandshakeTimerRef.current);
+      }
+    };
+  }, []);
 
-  // Handle Login
-  const handleLogin = (name: string) => {
-    if (!name.trim()) return;
-    setUserName(name.trim());
-    setUserProfile({
-      ...initialMockUserProfile,
-      name: name.trim(),
-      avatar: getRandomAvatar(),
-    });
-    setIsLoggedIn(true);
-  };
+  // ---------------------------------------------------------
+  // 🎬 INTRO SEQUENCER
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (appState === 'intro1') {
+      const timer = setTimeout(() => setAppState('intro2'), 6000); 
+      return () => clearTimeout(timer);
+    }
+    if (appState === 'intro2') {
+      const timer = setTimeout(() => setAppState('selection'), 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [appState]);
 
-  // Restore login from localStorage (supports guest or logged-in users)
+  // ---------------------------------------------------------
+  // 🎮 GAME LOGIC (Added to existing Chat)
+  // ---------------------------------------------------------
+  // Logic 1: Check threshold for Turing Test
+  useEffect(() => {
+    if (!selectedUser || gameState !== 'playing') return;
+    const currentMsgs = conversations[selectedUser.id] || [];
+    const opponentMsgCount = currentMsgs.filter(m => !m.isUserMessage).length;
+    
+    // Only trigger if we are in chat state and active
+    if (appState === 'chat' && opponentMsgCount >= MESSAGE_THRESHOLD) {
+      if (selectedUser.isReal) {
+        if (!hasSignaledJudgingRef.current) {
+          hasSignaledJudgingRef.current = true;
+          fetch('/api/talk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'phase',
+              sessionId: activeSessionId,
+              content: 'judging',
+            }),
+          }).catch((e) => console.error('[Phase] Failed to signal judging:', e));
+        }
+        setGameState('judging');
+      } else {
+        setGameState('analyzing');
+      }
+    }
+  }, [conversations, selectedUser, gameState, appState, activeSessionId]);
+
+  // Logic 2: Delay timer for analysis
+  useEffect(() => {
+    if (gameState === 'analyzing') {
+      const timer = setTimeout(() => setGameState('judging'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState]);
+
+  // ---------------------------------------------------------
+  // 🔌 PUSHER & AUTH LOGIC (Preserved)
+  // ---------------------------------------------------------
+  
+  // Initial Load & Auth
   useEffect(() => {
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem('turing_user') : null;
       if (raw) {
         const p = JSON.parse(raw);
-        setUserName(p.name || '');
-        setUserProfile({
-          ...initialMockUserProfile,
-          name: p.name || initialMockUserProfile.name,
-          avatar: p.avatar || initialMockUserProfile.avatar,
-          bio: p.bio || initialMockUserProfile.bio,
-        });
+        // Add a short unique suffix to ensure different tabs have different names
+        const storedName = p.name || '';
+        // Check if this tab already has a session name
+        const sessionName = typeof window !== 'undefined' ? sessionStorage.getItem('session_user_name') : null;
+        if (sessionName) {
+          setUserName(sessionName);
+        } else {
+          // First time in this tab - use stored name or create new
+          const finalName = storedName || `Survivor_${Math.floor(Math.random()*10000)}`;
+          setUserName(finalName);
+          sessionStorage.setItem('session_user_name', finalName);
+          if (!storedName) {
+            localStorage.setItem('turing_user', JSON.stringify({ name: finalName }));
+          }
+        }
         setIsLoggedIn(true);
       } else {
-        // Guest by default; leave isLoggedIn false so Pusher is not attempted
-        setIsLoggedIn(false);
+        // If no user, prompt for name via window prompt for simplicity in this demo context
+        const inputName = window.prompt('Enter your survivor name:', `Survivor_${Math.floor(Math.random()*10000)}`);
+        const guestName = inputName?.trim() || `Survivor_${Math.floor(Math.random()*10000)}`;
+        setUserName(guestName);
+        localStorage.setItem('turing_user', JSON.stringify({ name: guestName }));
+        sessionStorage.setItem('session_user_name', guestName);
+        setIsLoggedIn(true);
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { console.error('[Auth] Error:', e); }
   }, []);
 
-  // Pusher Presence Channel for real-time user discovery
+  // Fetch AI on Mount (with guard to prevent duplicate calls in Strict Mode)
+  const hasFetchedAI = useRef(false);
+  useEffect(() => {
+    if (hasFetchedAI.current) return;
+    hasFetchedAI.current = true;
+    
+    const fetchAI = async () => {
+        try {
+            const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+            console.log('[Match] Fetching AI characters...');
+            const res = await fetch('/api/match', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: newSessionId }),
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            const aiUsers: User[] = (data.allCharacters || []).map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                status: 'online',
+                isReal: false,
+                profile: c.profile,
+                systemPrompt: c.systemPrompt
+            }));
+            
+            console.log(`[Match] Received ${aiUsers.length} AI characters`);
+            setAllUsers(prev => {
+                const realUsers = prev.filter(u => u.isReal === true);
+                return [...realUsers, ...aiUsers];
+            });
+        } catch(e) { console.error(e); }
+    };
+    fetchAI();
+  }, []);
+
+  // Pusher Setup
   useEffect(() => {
     if (!isLoggedIn || !userName) return;
-
     const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
-
-    if (!pusherKey || !pusherCluster) {
-      console.warn('Pusher keys missing. Real-time chat will not work.');
-      return;
-    }
-
-    console.log('Initializing Pusher for user:', userName);
+    if (!pusherKey || !pusherCluster) return;
 
     if (!pusherRef.current) {
       pusherRef.current = new Pusher(pusherKey, {
         cluster: pusherCluster,
         authEndpoint: '/api/pusher/auth',
-        auth: {
-          params: {
-            user_name: userName,
-            user_id: `user_${userName}_${Date.now()}`,
-          },
-        },
+        auth: { params: { user_name: userName, user_id: `user_${userName}_${Date.now()}` } },
       });
-      console.log('Pusher instance created');
     }
 
     const pusher = pusherRef.current;
     const presenceChannel = pusher.subscribe('presence-lobby');
-    presenceChannelRef.current = presenceChannel;
-    
-    console.log('Subscribing to presence-lobby...');
 
-    // Log all Pusher connection state changes
-    pusher.connection.bind('state_change', (states: any) => {
-      console.log('🔌 Pusher state changed:', states.previous, '→', states.current);
-    });
-
-    pusher.connection.bind('error', (err: any) => {
-      console.error('❌ Pusher connection error:', err);
-    });
-
-    // Handle subscription success
     presenceChannel.bind('pusher:subscription_succeeded', (members: any) => {
-      console.log('Subscription succeeded! Current members:', members.count);
-      updateUserListFromPresence(members);
+        console.log('[Pusher] Subscription succeeded! Members count:', members.count);
+        const realUsers: User[] = [];
+        members.each((member: any) => {
+            console.log('[Pusher] Member in lobby:', member.info.name, 'id:', member.id);
+            if (member.info.name !== userName) {
+                realUsers.push({
+                    id: member.id,
+                    name: member.info.name,
+                    status: 'online',
+                    isReal: true,
+                });
+            }
+        });
+        console.log('[Pusher] Real users found:', realUsers.length);
+        setAllUsers(prev => [...prev.filter(u => !u.isReal), ...realUsers]);
     });
 
-    // Handle new member
-    presenceChannel.bind('pusher:member_added', (member: PresenceMember) => {
-      console.log('New member added:', member.info.name);
-      if (member.info.name !== userName) {
-        addPresenceUser(member);
+    presenceChannel.bind('pusher:member_added', (member: any) => {
+        if (member.info.name === userName) return;
+        setAllUsers(prev => {
+            if (prev.some(u => u.name === member.info.name)) return prev;
+            return [...prev, {
+                id: member.id,
+                name: member.info.name,
+                status: 'online',
+                isReal: true,
+            }];
+        });
+    });
+
+    presenceChannel.bind('pusher:member_removed', (member: any) => {
+        setAllUsers(prev => prev.filter(u => u.name !== member.info.name));
+    });
+
+    presenceChannel.bind('chat-request', (data: any) => {
+      console.log('[Invite] Received chat-request:', data);
+      if (data.targetUser === userName) {
+        const invite: Invite = { fromUser: data.fromUser, targetUser: data.targetUser, sessionId: data.sessionId, timestamp: Date.now(), tags: data.tags || [] };
+        setActiveInvite(invite);
       }
     });
 
-    // Handle member removal
-    presenceChannel.bind('pusher:member_removed', (member: PresenceMember) => {
-      console.log('Member removed:', member.info.name);
-      removePresenceUser(member);
-    });
-
-    // Handle chat requests (queue + modal + notification)
-    presenceChannel.bind('client-chat-request', (data: any) => {
-      console.log('📨 [EVENT RECEIVED] client-chat-request from:', data.fromUser, 'to:', data.targetUser, 'sessionId:', data.sessionId);
+    presenceChannel.bind('chat-accepted', (data: any) => {
+      console.log('[Invite] Received chat-accepted:', data);
       if (data.targetUser === userName) {
-        const invite: Invite = { fromUser: data.fromUser, targetUser: data.targetUser, sessionId: data.sessionId, timestamp: Date.now() };
-        if (document.visibilityState === 'visible') {
-          console.log('Page visible — showing in-page modal for invite from', data.fromUser);
-          setActiveInvite(invite);
-        } else {
-          console.log('Page hidden — queueing invite and sending notification');
-          setPendingInvites(prev => [invite, ...prev]);
-          showDesktopNotification(invite);
-        }
-      }
-    });
-
-    presenceChannel.bind('client-chat-accepted', (data: any) => {
-      console.log('✅ [ACCEPTED] Received client-chat-accepted from:', data.fromUser, 'sessionId:', data.sessionId);
-      if (data.targetUser === userName) {
-        console.log('✅ [ACCEPTED] Setting activeSessionId for receiver to:', data.sessionId);
+        setWaitingForAccept(null);
         setActiveSessionId(data.sessionId);
-        console.log('✅ Session established:', data.sessionId);
-        // Switch to that user's conversation
+        setOpponentTags(data.tags || []); // Store opponent's tags
         const targetUser = allUsersRef.current.find(u => u.name === data.fromUser);
         if (targetUser) {
           setSelectedUser(targetUser);
-          console.log('Switched to chat with:', data.fromUser);
+          setAppState('chat');
+          setGameState('playing');
+          setConversations(prev => ({
+            ...prev,
+            [targetUser.id]: prev[targetUser.id] || []
+          }));
         }
       }
     });
 
-    // Handle AI user removal from lobby
-    presenceChannel.bind('client-ai-left', (data: any) => {
-      console.log('🤖 [AI LEFT] Received client-ai-left for aiId:', data.aiId);
-      setAllUsers(prev => prev.filter(u => u.id !== data.aiId));
-      console.log('AI user removed from lobby');
-    });
-
     return () => {
-      console.log('Cleaning up Pusher subscription...');
-      presenceChannel.unbind_all();
-      pusher.unsubscribe('presence-lobby');
+        presenceChannel.unbind_all();
+        pusher.unsubscribe('presence-lobby');
     };
-  }, [isLoggedIn, userName]); // Removed allUsers from dependencies
+  }, [isLoggedIn, userName]);
 
-  // Private session channel for direct messaging
+  // Private Channel for Messages
   useEffect(() => {
-    if (!activeSessionId || !pusherRef.current) {
-      console.log('❌ Private channel effect skipped: activeSessionId=', activeSessionId, 'pusherRef.current=', !!pusherRef.current);
-      return;
-    }
-
-    console.log('🔗 Subscribing to private channel:', `private-session-${activeSessionId}`);
-
-    const pusher = pusherRef.current;
-    const sessionChannel = pusher.subscribe(`private-session-${activeSessionId}`);
-
-    sessionChannel.bind('pusher:subscription_succeeded', () => {
-      console.log('✅ Private channel subscription succeeded:', `private-session-${activeSessionId}`);
-    });
-
-    sessionChannel.bind('pusher:subscription_error', (error: any) => {
-      console.error('❌ Private channel subscription error:', error);
-    });
-
+    if (!activeSessionId || !pusherRef.current) return;
+    const sessionChannel = pusherRef.current.subscribe(`private-session-${activeSessionId}`);
+    
     sessionChannel.bind('new-message', (data: any) => {
-      console.log('📨 [PRIVATE CHANNEL] Received new-message:', data);
-      if (data.sender !== userName) {
-        const incomingMsg: Message = {
-          id: Date.now(),
-          sender: data.sender,
-          text: data.content,
-          isUserMessage: false,
-          timestamp: new Date(data.timestamp),
-        };
-
-        const senderUser = allUsersRef.current.find(u => u.name === data.sender);
-        const userId = senderUser ? senderUser.id : Date.now();
-
-        console.log('📝 Adding message to conversation for userId:', userId);
-        setConversations(prev => ({
-          ...prev,
-          [userId]: [...(prev[userId] || []), incomingMsg],
-        }));
-      } else {
-        console.log('📨 Ignoring own message from:', data.sender);
-      }
+        if (data.sender !== userName) {
+            const incomingMsg: Message = {
+                id: Date.now(),
+                sender: data.sender,
+                text: data.content,
+                isUserMessage: false,
+                timestamp: new Date(data.timestamp),
+            };
+            // Find user to map message correctly
+            const senderUser = allUsersRef.current.find(u => u.name === data.sender);
+            const userId = senderUser ? senderUser.id : 'unknown';
+            
+            setConversations(prev => ({
+                ...prev,
+                [userId]: [...(prev[userId] || []), incomingMsg],
+            }));
+        }
     });
+
+        sessionChannel.bind('phase-change', (data: any) => {
+          if (data?.phase === 'judging') {
+            setGameState('judging');
+          }
+        });
 
     return () => {
-      console.log('🔌 Unsubscribing from private channel:', `private-session-${activeSessionId}`);
-      sessionChannel.unbind_all();
-      pusher.unsubscribe(`private-session-${activeSessionId}`);
+        sessionChannel.unbind_all();
+        pusherRef.current?.unsubscribe(`private-session-${activeSessionId}`);
     };
-  }, [activeSessionId, userName]); // Removed allUsers from dependencies
+  }, [activeSessionId, userName]);
 
-  // Helper: Update user list from presence members
-  const updateUserListFromPresence = (members: any) => {
-    console.log('Updating user list from presence. Total members:', members.count);
-    const realUsers: User[] = [];
-    members.each((member: PresenceMember) => {
-      console.log('Processing member:', member.id, member.info.name);
-      if (member.info.name !== userName) {
-        realUsers.push({
-          id: member.id,
-          name: member.info.name,
-          avatar: getAvatarForUser(member.info.name),
-          status: 'online',
-          isReal: true,
-        });
-      }
-    });
-    console.log('Real users found:', realUsers.length);
-    setAllUsers([...mockUsers, ...realUsers]);
-  };
+  // ---------------------------------------------------------
+  // 🕹️ ACTIONS & HANDLERS
+  // ---------------------------------------------------------
 
-  const addPresenceUser = (member: PresenceMember) => {
-    console.log('Adding presence user:', member.info.name);
-    setAllUsers(prev => {
-      const exists = prev.some(u => u.name === member.info.name);
-      if (exists) {
-        console.log('User already exists, skipping');
-        return prev;
-      }
-      const newUser: User = {
-        id: member.id,
-        name: member.info.name,
-        avatar: getAvatarForUser(member.info.name),
-        status: 'online' as const,
-        isReal: true,
-      };
-      console.log('Added new user to list');
-      return [...prev, newUser];
-    });
-  };
+  const handleUserSelect = (user: User) => {
+      setSelectedUser(user);
+      if (user.isReal) {
+        const sharedSessionId = `match_${userName}_${user.name}_${Date.now()}`;
+        setActiveSessionId(sharedSessionId);
+        setWaitingForAccept(user.name);
 
-  const removePresenceUser = (member: PresenceMember) => {
-    console.log('Removing presence user:', member.info.name);
-    setAllUsers(prev => prev.filter(u => u.name !== member.info.name));
-  };
-
-  // Desktop notification helper
-  const showDesktopNotification = (invite: Invite) => {
-    try {
-      if (typeof window === 'undefined' || !('Notification' in window)) return;
-      if (Notification.permission === 'granted') {
-        const n = new Notification(`${invite.fromUser} 邀请你开始对话`, {
-          body: '点击以切回页面并处理邀请',
-          requireInteraction: true,
-        } as any);
-        n.onclick = () => {
-          try { window.focus(); } catch (e) {}
-          setActiveInvite(invite);
-          setPendingInvites(prev => prev.filter(i => i.sessionId !== invite.sessionId));
-        };
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') showDesktopNotification(invite);
-        });
-      }
-    } catch (err) {
-      console.warn('Notification failed', err);
-    }
-  };
-
-  // Accept an invite (called from modal UI)
-  const acceptInvite = (invite: Invite | null) => {
-    if (!invite) return;
-    const sharedSession = invite.sessionId;
-    console.log('✅ [ACCEPT] Setting activeSessionId to:', sharedSession);
-    setActiveSessionId(sharedSession);
-    console.log('✅ Chat accepted (via modal), sessionId:', sharedSession);
-    try {
-      presenceChannelRef.current?.trigger('client-chat-accepted', {
-        fromUser: userName,
-        targetUser: invite.fromUser,
-        sessionId: sharedSession,
-      });
-      console.log('✅ Acceptance notification sent');
-    } catch (error) {
-      console.error('❌ Failed to send acceptance:', error);
-    }
-    const targetUser = allUsersRef.current.find(u => u.name === invite.fromUser);
-    if (targetUser) setSelectedUser(targetUser);
-    setActiveInvite(null);
-    setPendingInvites(prev => prev.filter(i => i.sessionId !== invite.sessionId));
-  };
-
-  // Reject an invite
-  const rejectInvite = (invite: Invite | null) => {
-    if (!invite) return;
-    console.log('❌ Invite rejected from:', invite.fromUser);
-    // Optionally notify sender about rejection with a client event
-    try {
-      presenceChannelRef.current?.trigger('client-chat-rejected', {
-        fromUser: userName,
-        targetUser: invite.fromUser,
-        sessionId: invite.sessionId,
-      });
-    } catch (err) {
-      console.warn('Failed to send rejection', err);
-    }
-    setActiveInvite(null);
-    setPendingInvites(prev => prev.filter(i => i.sessionId !== invite.sessionId));
-  };
-
-  // When the page becomes visible, process pending invites (open the most recent)
-  useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible' && pendingInvites.length > 0 && !activeInvite) {
-        const next = pendingInvites[0];
-        setActiveInvite(next);
-        setPendingInvites(prev => prev.slice(1));
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [pendingInvites, activeInvite]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversations, selectedUser]);
-
-  // Shared helper: Fetch AI characters from /api/match and add to lobby
-  const fetchAndAddCharacters = async (selectMatchedOpponent: boolean = true) => {
-    try {
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
-      const res = await fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: newSessionId }),
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch match');
-
-      const data = await res.json();
-      const { allCharacters } = data;
-      if (!allCharacters || allCharacters.length === 0) throw new Error('No characters returned');
-
-      // Create User objects for characters
-      const aiUsers: User[] = [];
-
-      allCharacters.forEach((character: any) => {
-        const aiUser: User = {
-          id: character.id,
-          name: character.name,
-          avatar: character.avatar || getAvatarForUser(character.name || 'AI'),
-          status: 'online',
-          isReal: false,
-          profile: character.profile,
-          systemPrompt: character.systemPrompt,
-        };
-        aiUsers.push(aiUser);
-
-        // NOTE: Starter message will be added when user actually starts the chat
-        // Initialize empty conversation - don't add starter message yet
-        setConversations(prev => ({
-          ...prev,
-          [aiUser.id]: [],
-        }));
-      });
-
-      // Clear existing AI users and add new ones (keep only real human users)
-      setAllUsers(prev => {
-        const realUsers = prev.filter(u => u.isReal === true);
-        return [...realUsers, ...aiUsers];
-      });
-
-      // Select the first character if requested
-      if (selectMatchedOpponent && aiUsers.length > 0) {
-        setSelectedUser(aiUsers[0]);
-      }
-
-      console.log(`[Lobby] Added ${aiUsers.length} AI character(s):`, aiUsers.map(u => u.name).join(', '));
-    } catch (err) {
-      console.error('fetchAndAddCharacters failed:', err);
-    }
-  };
-
-  // NOTE: AI opponents are no longer auto-created on mount.
-  // Users must manually select opponents (human or AI) from the lobby.
-  // This ensures the Start button appears only after user explicitly selects someone.
-
-  // Auto-load AI characters into lobby on mount (but don't auto-select or auto-start)
-  useEffect(() => {
-    fetchAndAddCharacters(false); // Load AI, don't auto-select, don't auto-start
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Handle user selection
-  const handleUserClick = (user: User) => {
-    console.log('User clicked:', user.name, 'isReal:', user.isReal);
-    // Prevent opening a new chat while another chat is active
-    if (selectedUser && selectedUser.id !== user.id && activeSessionId) {
-      alert('Please end the current chat before selecting another.');
-      return;
-    }
-
-    // Simply select the user (no auto-start)
-    setSelectedUser(user);
-    console.log('User selected:', user.name);
-  };
-
-  // Start chat with the selected user
-  const startChatWithSelectedUser = async () => {
-    if (!selectedUser) return;
-
-    if (selectedUser.isReal) {
-      // Real human user - send chat request
-      const sharedSessionId = `match_${userName}_${selectedUser.name}_${Date.now()}`;
-      console.log('Sending chat request to:', selectedUser.name, 'with sessionId:', sharedSessionId);
-      
-      if (presenceChannelRef.current) {
-        try {
-          presenceChannelRef.current.trigger('client-chat-request', {
+        fetch('/api/talk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'invite',
             fromUser: userName,
-            targetUser: selectedUser.name,
+            targetUser: user.name,
             sessionId: sharedSessionId,
-          });
-          console.log('✅ Chat request sent successfully');
-          alert(`Chat request sent to ${selectedUser.name}. Waiting for response...`);
-        } catch (error) {
-          console.error('❌ Failed to send chat request:', error);
-          alert(`Failed to send chat request: ${error}\n\nMake sure "Enable client events" is checked in your Pusher Dashboard > App Settings.`);
-        }
+            tags: userTags, // Send our tags to opponent
+          }),
+        }).catch((e) => {
+          console.error('[Invite] Failed to send invite:', e);
+          setWaitingForAccept(null);
+          alert('Invite failed. Please try again.');
+        });
       } else {
-        console.error('❌ Presence channel not available');
-        alert('Presence channel not ready. Please refresh the page.');
+        // For AI: pick random tags from their profile
+        setOpponentTags(getRandomTags(user.profile));
+        startAISessionWithHandshake(user);
       }
-    } else {
-      // AI user - start session
+  };
+
+  const startAISessionWithHandshake = (user: User) => {
+      const delay = 3000 + Math.floor(Math.random() * 4000); // 3–7s
+      setAiHandshakeUser(user.name);
+      if (aiHandshakeTimerRef.current) {
+        window.clearTimeout(aiHandshakeTimerRef.current);
+      }
+      aiHandshakeTimerRef.current = window.setTimeout(() => {
+        setAiHandshakeUser(null);
+        startAISession(user);
+      }, delay);
+  };
+
+  const startAISession = async (user: User) => {
+      setAppState('chat');
+      setGameState('playing');
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
-      
-      try {
-        // Call /api/session to start the session
-        const sessionRes = await fetch('/api/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: newSessionId,
-            action: 'start',
-            opponent: {
-              id: selectedUser.id,
-              modelId: (selectedUser as any)?.profile?.modelId,
-              type: 'AI',
-            },
-          }),
-        });
+      setActiveSessionId(newSessionId);
 
-        if (!sessionRes.ok) throw new Error('Failed to start session');
-
-        setActiveSessionId(newSessionId);
-        
-        // Add AI starter message when session actually starts
-        const starterMessage: Message = {
-          id: Date.now(),
-          sender: selectedUser.name,
-          text: (selectedUser as any)?.profile?.starterMessage || 'Hi there!',
-          isUserMessage: false,
-          timestamp: new Date(),
-        };
-        
-        setConversations(prev => ({
+      // Starter Message
+      const starterMsg = (user.profile as any)?.starterMessage || 'Connection established.';
+      setConversations(prev => ({
           ...prev,
-          [selectedUser.id]: [starterMessage],
-        }));
-        
-        console.log('✅ Session started:', newSessionId);
-      } catch (error) {
-        console.error('Failed to start chat:', error);
-        alert('Failed to start chat. Please try again.');
-      }
-    }
-  };
+          [user.id]: [{ id: Date.now(), sender: user.name, text: starterMsg, isUserMessage: false, timestamp: new Date() }]
+      }));
 
-  // End the current session
-  const endSession = async () => {
-    if (!activeSessionId || !selectedUser) return;
-
-    try {
-      // For AI chat: call /api/session to clean up backend resources
-      if (selectedUser.isReal === false) {
-        const res = await fetch('/api/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: activeSessionId,
-            action: 'end',
-          }),
-        });
-
-        if (!res.ok) throw new Error('Failed to end AI session');
-        console.log('✅ AI session ended:', activeSessionId);
-
-        // Remove AI user from lobby
-        setAllUsers(prev => prev.filter(u => u.id !== selectedUser.id));
-
-        // Notify other clients that this AI is no longer available
-        try {
-          presenceChannelRef.current?.trigger('client-ai-left', {
-            sessionId: activeSessionId,
-            aiId: selectedUser.id,
+      try {
+          await fetch('/api/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: newSessionId, action: 'start', opponent: { id: user.id, type: 'AI' } })
           });
-          console.log('✅ AI removal notification sent');
-        } catch (error) {
-          console.warn('Failed to send AI removal notification:', error);
-        }
-      } else {
-        // For human-human chat: just end the session locally
-        // The other party will see the connection drop and can also end their session
-        console.log('✅ Human chat session ended:', activeSessionId);
-      }
-
-      // Clear session state for both AI and human chats
-      setSelectedUser(null);
-      setActiveSessionId('');
-    } catch (error) {
-      console.error('Failed to end session:', error);
-      alert('Failed to end session. Please try again.');
-    }
+      } catch(e) { console.error(e); }
   };
 
-  // Handle sending message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!inputText.trim() || !selectedUser || isTyping) return;
+
+    const isHumanChat = selectedUser.isReal === true;
+    const currentMessages = conversations[selectedUser.id] || [];
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    if (isHumanChat && lastMessage?.sender === userName) return;
 
     const userText = inputText;
     const currentUserId = selectedUser.id;
-    const personaId = selectedUser.name.toLowerCase() === 'cute' ? 'cute' : 'default';
-    const clientSystemPrompt = (selectedUser as any)?.systemPrompt;
-    const isAIChat = !!clientSystemPrompt || selectedUser.isReal === false;
+    const newMessage: Message = { id: Date.now(), sender: userName, text: userText, isUserMessage: true, timestamp: new Date() };
 
-    const newMessage: Message = {
-      id: Date.now(),
-      sender: userName,
-      text: userText,
-      isUserMessage: true,
-      timestamp: new Date(),
-    };
-
-    setConversations(prev => ({
-      ...prev,
-      [currentUserId]: [...(prev[currentUserId] || []), newMessage],
-    }));
-
+    setConversations(prev => ({ ...prev, [currentUserId]: [...(prev[currentUserId] || []), newMessage] }));
     setInputText('');
-    setIsTyping(true);
 
-    // Case 1: AI Chat (generated persona or legacy Cute)
-    if (isAIChat) {
-      try {
-        // Extract modelId from character profile (full model ID string)
-        const modelId = (selectedUser as any)?.profile?.modelId || 'Qwen/Qwen2.5-7B-Instruct';
-        
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: (conversations[currentUserId] || []).concat(newMessage).map(m => ({
-              role: m.isUserMessage ? 'user' : 'assistant',
-              content: m.text,
-            })),
-            sessionId: activeSessionId || `ai_${userName}_${Date.now()}`,
-            personaId,
-            systemPrompt: clientSystemPrompt,
-            opponentInfo: (selectedUser as any)?.profile || null,
-            modelId: modelId, // Pass full model ID for routing
-          }),
-        });
+    const isAIChat = selectedUser.isReal === false;
+    if (isAIChat) setIsTyping(true);
 
-        if (!response.ok) throw new Error('Failed to get response');
-
-        const aiMessageId = Date.now() + 1;
-        const aiMessage: Message = {
-          id: aiMessageId,
-          sender: selectedUser.name,
-          text: '',
-          isUserMessage: false,
-          timestamp: new Date(),
-        };
-
-        setConversations(prev => ({
-          ...prev,
-          [currentUserId]: [...(prev[currentUserId] || []), aiMessage],
-        }));
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
-
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value, { stream: true });
-            fullText += chunk;
-
-            setConversations(prev => {
-              const userMsgs = [...(prev[currentUserId] || [])];
-              const msgIndex = userMsgs.findIndex(m => m.id === aiMessageId);
-              if (msgIndex !== -1) {
-                userMsgs[msgIndex] = { ...userMsgs[msgIndex], text: fullText };
-              }
-              return { ...prev, [currentUserId]: userMsgs };
+    try {
+        if (isAIChat) {
+            const modelId = (selectedUser as any)?.profile?.modelId || 'deepseek-chat';
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: (conversations[currentUserId] || []).concat(newMessage).map(m => ({
+                        role: m.isUserMessage ? 'user' : 'assistant',
+                        content: m.text,
+                    })),
+                    sessionId: activeSessionId,
+                    systemPrompt: selectedUser.systemPrompt,
+                    modelId: modelId,
+                }),
             });
-          }
-        }
-      } catch (error) {
-        console.error('Chat error:', error);
-        const errorMessage: Message = {
-          id: Date.now() + 2,
-          sender: 'System',
-          text: 'Sorry, I encountered an error. Please try again.',
-          isUserMessage: false,
-          timestamp: new Date(),
-        };
-        setConversations(prev => ({
-          ...prev,
-          [currentUserId]: [...(prev[currentUserId] || []), errorMessage],
-        }));
-      } finally {
-        setIsTyping(false);
-      }
-    } 
-    // Case 2: Human-Human Chat (Real users)
-    else {
-      console.log('💬 Sending human message to session:', activeSessionId, 'content:', userText);
-      try {
-        const response = await fetch('/api/talk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: activeSessionId || `temp_${Date.now()}`,
-            sender: userName,
-            content: userText,
-            role: 'user',
-          }),
-        });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[Chat] API Error:', response.status, errorText);
+                throw new Error(`Chat API failed (${response.status}): ${errorText.substring(0, 100)}`);
+            }
+            
+            const aiMessageId = Date.now() + 1;
+            const aiMessage: Message = { id: aiMessageId, sender: selectedUser.name, text: '', isUserMessage: false, timestamp: new Date() };
+            setConversations(prev => ({ ...prev, [currentUserId]: [...(prev[currentUserId] || []), aiMessage] }));
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ /api/talk failed:', response.status, errorText);
-          throw new Error(`Failed to send human message: ${response.status}`);
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            if (reader) {
+                while(true) {
+                    const { done, value } = await reader.read();
+                    if(done) break;
+                    fullText += decoder.decode(value, { stream: true });
+                    setConversations(prev => {
+                        const msgs = [...(prev[currentUserId] || [])];
+                        const idx = msgs.findIndex(m => m.id === aiMessageId);
+                        if (idx !== -1) msgs[idx] = { ...msgs[idx], text: fullText };
+                        return { ...prev, [currentUserId]: msgs };
+                    });
+                }
+            }
+        } else {
+            // Human Chat
+            await fetch('/api/talk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: activeSessionId,
+                    sender: userName,
+                    content: userText,
+                    role: 'user',
+                }),
+            });
         }
-
-        const result = await response.json();
-        console.log('✅ /api/talk success:', result);
-      } catch (error) {
-        console.error('❌ Human talk error:', error);
-      } finally {
-        setIsTyping(false);
-      }
-    }
+    } catch(e) { console.error(e); } finally { setIsTyping(false); }
   };
 
-  // Get current conversation
+  const acceptInvite = (invite: Invite | null) => {
+    if (!invite) return;
+    console.log('[Invite] Accepting invite:', invite);
+    setActiveSessionId(invite.sessionId);
+    setOpponentTags(invite.tags || []); // Store inviter's tags
+
+    fetch('/api/talk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'accept',
+        fromUser: userName,
+        targetUser: invite.fromUser,
+        sessionId: invite.sessionId,
+        tags: userTags, // Send our tags back
+      }),
+    }).catch((e) => console.error('[Invite] Failed to accept invite:', e));
+
+    const target = allUsersRef.current.find(u => u.name === invite.fromUser);
+    if (target) {
+        setSelectedUser(target);
+        setConversations(prev => ({
+            ...prev,
+            [target.id]: prev[target.id] || []
+        }));
+        setAppState('chat');
+        setGameState('playing');
+    }
+    setActiveInvite(null);
+  };
+
+  const handleVote = (vote: 'AI' | 'Human') => {
+      if (!selectedUser) return;
+      const isActuallyHuman = selectedUser.isReal === true;
+      const isCorrect = (vote === 'Human' && isActuallyHuman) || (vote === 'AI' && !isActuallyHuman);
+      setGameResult(isCorrect ? 'won' : 'lost');
+      setGameState('result');
+  };
+
+  const resetGame = () => {
+    setAppState('selection');
+    setSelectedUser(null);
+    setGameState('playing');
+    setGameResult(null);
+    setActiveSessionId('');
+    setIsTyping(false);
+    setAiHandshakeUser(null);
+    setOpponentTags([]);
+    hasSignaledJudgingRef.current = false;
+    // End session logic here if needed
+  };
+
   const currentMessages = selectedUser ? conversations[selectedUser.id] || [] : [];
-
-
+  const isHumanChat = selectedUser?.isReal === true;
+  const lastMessage = currentMessages[currentMessages.length - 1];
+  const canSendHuman = !isHumanChat || !lastMessage || lastMessage.sender !== userName;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* ========== Invite Modal (replaces confirm) ========= */}
-      {activeInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full mx-4">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl">{getAvatarForUser(activeInvite.fromUser)}</div>
-              <div>
-                <div className="text-lg font-semibold">{activeInvite.fromUser}</div>
-                <div className="text-sm text-gray-500">wants to start a Turing Test with you</div>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => { rejectInvite(activeInvite); }} className="px-4 py-2 rounded-xl bg-gray-100">Decline</button>
-              <button onClick={() => { acceptInvite(activeInvite); }} className="px-4 py-2 rounded-xl bg-blue-600 text-white">Accept</button>
+    <div className="relative w-full h-screen bg-black text-cyan-50 font-mono overflow-hidden">
+      <style>{styles}</style>
+
+      {/* ========================================================== */}
+      {/* 🚀 VIEW 1: INTRO (Descent) */}
+      {/* ========================================================== */}
+      {appState === 'intro1' && (
+        <div className="relative w-full h-full overflow-hidden cursor-pointer" onClick={() => setAppState('intro2')}>
+          <div className="absolute inset-0 bg-[#020205]"></div>
+          <div className="absolute inset-0 opacity-60" style={{ 
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px)',
+            backgroundSize: '2px 100px',
+            animation: 'star-fly 0.2s linear infinite'
+          }}></div>
+          <div className="absolute left-0 right-0 bottom-0 h-[80vh] w-full flex justify-center items-end animate-[planet-rise_6s_ease-in-out_forwards]">
+            <div className="w-[150vw] h-[150vw] rounded-full bg-gradient-to-t from-[#3f0d0d] via-[#7f1d1d] to-[#000000] shadow-[0_-50px_100px_rgba(220,38,38,0.3)]"></div>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-red-500/20 to-transparent animate-[blink-red_0.1s_infinite]"></div>
+          <div className="absolute inset-0 border-[40px] border-black/80 rounded-[50px] pointer-events-none animate-[shake-hard_0.5s_infinite]">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+               <h1 className="text-6xl md:text-9xl font-black text-red-500 tracking-tighter mix-blend-screen animate-pulse">WARNING</h1>
+               <p className="text-2xl md:text-4xl text-red-500 bg-black/50 px-4 font-bold border-y-2 border-red-500">HULL INTEGRITY 0%</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========== Left Side: Chat Container (60-70%) ========== */}
-      <div className="chat-container flex-[2] bg-gray-100 border-r border-gray-300 flex flex-col">
-        {/* User List Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-md flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">💬 Chat Lobby</h2>
-            <p className="text-sm text-blue-100">Select a user to start chatting</p>
+      {/* ========================================================== */}
+      {/* 🔥 VIEW 2: WRECKAGE */}
+      {/* ========================================================== */}
+      {appState === 'intro2' && (
+        <div className="relative w-full h-full overflow-hidden cursor-pointer bg-[#0f0505]" onClick={() => setAppState('selection')}>
+          <div className="absolute bottom-0 w-full h-1/2 bg-[#1a0505] opacity-50"></div>
+          <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-10"></div>
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-96 h-96 z-20">
+             <svg viewBox="0 0 100 100" fill="none" className="w-full h-full drop-shadow-[0_0_20px_rgba(255,100,0,0.5)]">
+               <path d="M20 80 L50 40 L80 80 L70 90 L30 90 Z" fill="#2d2d2d" stroke="#000" strokeWidth="2"/>
+               <path d="M35 80 L50 50 L65 80" fill="#4a4a4a"/>
+             </svg>
           </div>
-          <Link href="/" className="inline-flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-full text-sm font-medium" title="Back to homepage">
-            <span className="text-lg">🏠</span>
-            Back to Homepage
-          </Link>
+          <div className="absolute top-1/4 w-full text-center z-40">
+            <h2 className="text-3xl md:text-5xl font-bold text-orange-500 mb-4 animate-pulse uppercase tracking-widest drop-shadow-md">System Rebooting...</h2>
+            <div className="max-w-2xl mx-auto bg-black/60 backdrop-blur-md p-6 border-l-4 border-orange-500 text-left">
+              <p className="text-lg text-gray-300 font-mono leading-relaxed">
+                {'>'} DETECTED SURVIVORS: {allUsers.length}<br/>
+                {'>'} ESTABLISHING NEURAL LINK...
+              </p>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* User List */}
-        <div className="flex-none overflow-y-auto border-b border-gray-300 bg-white">
-          {allUsers.map((user) => (
-            <div
-              key={user.id}
-              onClick={() => handleUserClick(user)}
-              className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-200 ${
-                selectedUser?.id === user.id ? 'bg-blue-100' : ''
-              }`}
-            >
-              <div className="text-3xl">{user.avatar}</div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800">
-                  {user.name}
-                  {user.isReal && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Human</span>}
-                  {!user.isReal && <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">AI</span>}
-                </div>
-                {/* Display model vendor: displayName + modelId (if available) */}
-                <div className="mt-1">
-                  {(() => {
-                    const modelId = (user as any)?.profile?.modelId;
-                    const display = (user as any)?.profile?.modelDisplayName || modelId;
-                    if (!modelId) {
-                      return ((user as any)?.profile?.shortTags || []).slice(0,4).map((t: string, i: number) => (
-                        <span key={i} className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{t}</span>
-                      ));
-                    }
-                    return (
-                      <>
-                        <span className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{display}</span>
-                        <span className="mr-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{modelId}</span>
-                      </>
-                    );
-                  })()}
+      {/* ========================================================== */}
+      {/* 🧬 VIEW 3: SELECTION (Lobby) - REFACTORED FOR DYNAMIC USERS */}
+      {/* ========================================================== */}
+      {appState === 'selection' && (
+        <div className="relative w-full h-full flex bg-slate-950">
+          <div className="scanlines absolute inset-0 pointer-events-none opacity-20"></div>
+          
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden">
+            <div className="z-10 text-center mb-8 shrink-0">
+              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 tracking-tighter drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
+                SURVIVOR UPLINK
+              </h1>
+              <p className="text-slate-500 tracking-[0.5em] uppercase text-sm mt-2">Logged in as: {userName}</p>
+            </div>
 
-                  {((user as any)?.profile?.shortTags || []).slice(0,4).map((t: string, i: number) => (
-                    <span key={i} className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{t}</span>
-                  ))}
+            {/* Grid Container for Users */}
+            <div className="w-full max-w-5xl flex-1 overflow-y-auto z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+               {allUsers.filter(u => u.name !== userName).map((user) => (
+                 <div 
+                   key={user.id} 
+                   onClick={() => handleUserSelect(user)}
+                   className={`group relative h-64 bg-slate-900 border cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center
+                     ${user.isReal ? 'border-green-800 hover:border-green-400' : 'border-purple-900 hover:border-purple-400'}
+                   `}
+                 >
+                   <div className={`absolute top-0 left-0 w-full h-1 shadow-[0_0_10px] ${user.isReal ? 'bg-green-500 shadow-green-500' : 'bg-purple-500 shadow-purple-500'}`}></div>
+                   
+                   <div className="w-20 h-20 mb-4 border-2 border-slate-600 rounded-lg overflow-hidden bg-slate-800">
+                      {getPixelAvatar(user)}
+                   </div>
+                   
+                   <h2 className={`text-2xl font-bold mb-1 ${user.isReal ? 'text-green-500' : 'text-purple-400'}`}>
+                      {user.name.toUpperCase()}
+                   </h2>
+                   <div className="text-xs text-slate-500 bg-slate-950/50 px-2 py-1 rounded border border-slate-800">
+                      {user.isReal ? 'BIOLOGICAL SIGNAL' : 'SYNTHETIC SIGNAL'}
+                   </div>
+                   
+                   <div className={`mt-4 w-full py-2 text-center text-xs font-bold uppercase transition-colors text-black 
+                     ${user.isReal ? 'bg-green-900 group-hover:bg-green-500' : 'bg-purple-900 group-hover:bg-purple-500'}`}>
+                     INITIATE LINK
+                   </div>
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          {/* Right Sidebar: User Info Panel */}
+          <aside className="w-72 bg-slate-900/80 border-l border-slate-800 p-6 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+            <div className="w-24 h-24 mb-4 border-2 border-cyan-500 rounded-lg overflow-hidden bg-slate-800 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+              <PixelAvatarAri className="w-full h-full" />
+            </div>
+            <div className="text-cyan-400 font-bold text-lg tracking-wide mb-1">{userName.toUpperCase()}</div>
+            <div className="text-slate-500 text-xs uppercase tracking-[0.3em] mb-6">Survivor</div>
+            
+            <div className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-4 mb-4">
+              <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Status</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Signal</span>
+                  <span className="text-green-400 font-bold">ONLINE</span>
                 </div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-full ${user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                  {user.status}
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Uplinks</span>
+                  <span className="text-cyan-400 font-bold">{allUsers.filter(u => u.name !== userName).length}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Humans</span>
+                  <span className="text-green-400 font-bold">{allUsers.filter(u => u.isReal && u.name !== userName).length}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Synthetic</span>
+                  <span className="text-purple-400 font-bold">{allUsers.filter(u => !u.isReal).length}</span>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Chat Window */}
-        <div className="flex-1 flex flex-col bg-white">
-          {!selectedUser ? (
-            // Placeholder when no user selected
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-              <div className="text-center">
-                <div className="text-6xl mb-4">💬</div>
-                <p className="text-lg font-medium">Select a user to start chatting</p>
-                <p className="text-sm mt-2">Choose someone from the list above</p>
+            <div className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-4 mb-4">
+              <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Your Tags</h4>
+              <div className="flex flex-wrap gap-1 mb-3 min-h-[24px]">
+                {userTags.map((tag, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-cyan-900/50 text-cyan-400 text-[10px] uppercase tracking-wider border border-cyan-800 rounded flex items-center gap-1">
+                    {tag}
+                    <button onClick={() => setUserTags(prev => prev.filter((_, idx) => idx !== i))} className="text-cyan-600 hover:text-red-400">×</button>
+                  </span>
+                ))}
+                {userTags.length === 0 && <span className="text-slate-600 text-[10px]">No tags yet...</span>}
               </div>
+              <form onSubmit={(e) => { e.preventDefault(); if (tagInput.trim() && userTags.length < 6) { setUserTags(prev => [...prev, tagInput.trim()]); setTagInput(''); }}} className="flex gap-1">
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Add tag..."
+                  maxLength={20}
+                  className="flex-1 px-2 py-1 bg-slate-950 border border-slate-700 rounded text-[10px] text-cyan-400 placeholder:text-slate-600 focus:border-cyan-600 focus:outline-none"
+                />
+                <button type="submit" disabled={userTags.length >= 6} className="px-2 py-1 bg-cyan-900 text-cyan-400 text-[10px] rounded hover:bg-cyan-800 disabled:opacity-50">+</button>
+              </form>
             </div>
-          ) : (
-            <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-3 justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{selectedUser.avatar}</div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{selectedUser.name}</div>
-                      {/* Selected user shortTags */}
-                      <div className="mt-1">
-                        {/* Vendor tag for AI personas (display name + model id) */}
-                        {(() => {
-                          const modelId = (selectedUser as any)?.profile?.modelId;
-                          const display = (selectedUser as any)?.profile?.modelDisplayName || modelId;
-                          if (!modelId) return null;
-                          return (
-                            <>
-                              <span className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{display}</span>
-                              <span className="mr-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{modelId}</span>
-                            </>
-                          );
-                        })()}
 
-                        {((selectedUser as any)?.profile?.shortTags || []).slice(0,4).map((t: string, i: number) => (
-                          <span key={i} className="mr-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{t}</span>
+            <div className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-4">
+              <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider mb-2">Mission</h4>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Identify synthetic entities. Trust no one. Survive.
+              </p>
+            </div>
+          </aside>
+
+          {/* Invite Modal (Inline) */}
+          {activeInvite && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+                <div className="w-96 border-4 border-cyan-500 bg-slate-900 p-8 text-center animate-pulse shadow-[0_0_50px_rgba(6,182,212,0.5)]">
+                    <h3 className="text-2xl font-bold text-cyan-400 mb-4">INCOMING TRANSMISSION</h3>
+                    <p className="text-slate-300 mb-4">Signal detected from: <br/><span className="text-white text-xl font-bold">{activeInvite.fromUser}</span></p>
+                    {activeInvite.tags && activeInvite.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-center mb-6">
+                        {activeInvite.tags.map((tag, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-green-900/30 text-green-400 text-[10px] uppercase tracking-wider border border-green-800 rounded">{tag}</span>
                         ))}
                       </div>
-                      <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <span className={`w-2 h-2 rounded-full ${selectedUser.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                        {selectedUser.status}
-                      </div>
+                    )}
+                    <div className="flex gap-4 justify-center">
+                        <button onClick={() => setActiveInvite(null)} className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Ignore</button>
+                        <button onClick={() => acceptInvite(activeInvite)} className="px-6 py-3 bg-cyan-600 text-black hover:bg-cyan-400 font-bold uppercase">Accept</button>
                     </div>
-                  </div>
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    {!activeSessionId && (
-                      <button
-                        onClick={startChatWithSelectedUser}
-                        className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Start Chat
-                      </button>
-                    )}
-                    {activeSessionId && (
-                      <button
-                        onClick={endSession}
-                        className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        End
-                      </button>
-                    )}
-                  </div>
                 </div>
-              </div>
+            </div>
+          )}
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-                {currentMessages.length === 0 ? (
-                  <div className="text-center text-gray-400 mt-8">
-                    <p>No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  currentMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}
+          {/* Waiting for Accept Modal */}
+          {waitingForAccept && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+                <div className="w-96 border-4 border-yellow-500 bg-slate-900 p-8 text-center shadow-[0_0_50px_rgba(234,179,8,0.3)]">
+                    <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                    <h3 className="text-2xl font-bold text-yellow-400 mb-4">AWAITING RESPONSE</h3>
+                    <p className="text-slate-300 mb-8">Uplink request sent to: <br/><span className="text-white text-xl font-bold">{waitingForAccept}</span></p>
+                    <button onClick={() => { setWaitingForAccept(null); setSelectedUser(null); setActiveSessionId(''); }} className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+          )}
+
+          {/* AI Handshake Modal */}
+          {aiHandshakeUser && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+                <div className="w-96 border-4 border-purple-500 bg-slate-900 p-8 text-center shadow-[0_0_50px_rgba(168,85,247,0.3)]">
+                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                    <h3 className="text-2xl font-bold text-purple-400 mb-4">HANDSHAKE IN PROGRESS</h3>
+                    <p className="text-slate-300 mb-8">Uplink request sent to: <br/><span className="text-white text-xl font-bold">{aiHandshakeUser}</span></p>
+                    <button
+                      onClick={() => {
+                        if (aiHandshakeTimerRef.current) window.clearTimeout(aiHandshakeTimerRef.current);
+                        setAiHandshakeUser(null);
+                        setSelectedUser(null);
+                        setActiveSessionId('');
+                      }}
+                      className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase"
                     >
-                      <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${
-                          message.isUserMessage
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-800 border border-gray-200'
-                        }`}
-                      >
-                        <div className="text-xs opacity-70 mb-1">{message.sender}</div>
-                        <div className="whitespace-pre-wrap break-words">{message.text}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white text-gray-500 border border-gray-200 rounded-2xl px-4 py-2 shadow-sm italic text-sm">
-                      {selectedUser.name} is typing...
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input Area */}
-              <div className="bg-white border-t border-gray-200 p-4">
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim()}
-                    className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Send
-                  </button>
-                </form>
-              </div>
-            </>
+                        Cancel
+                    </button>
+                </div>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* ========== Right Side: Profile Container (30-40%) ========== */}
-      <div className="profile-container flex-1 bg-white flex flex-col">
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 shadow-md flex items-center justify-between">
-          <h2 className="text-xl font-bold">👤 My Profile</h2>
-          <div className="flex items-center gap-3">
-            {pendingInvites.length > 0 && (
-              <button onClick={() => { const next = pendingInvites[0]; setActiveInvite(next); setPendingInvites(prev => prev.slice(1)); }} className="bg-white text-pink-600 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
-                {pendingInvites.length} Pending
+      {/* ========================================================== */}
+      {/* 💬 VIEW 4: CHAT INTERFACE */}
+      {/* ========================================================== */}
+      {appState === 'chat' && selectedUser && (
+        <div className="relative w-full h-full flex flex-col bg-slate-950">
+            <div className="scanlines absolute inset-0 pointer-events-none z-50 opacity-10"></div>
+            
+            {/* Header */}
+            <div className="h-20 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-8 shrink-0">
+               <div className="flex items-center gap-6">
+                 <div className="w-12 h-12 rounded-md border-2 border-slate-600 overflow-hidden bg-slate-800">
+                   {getPixelAvatar(selectedUser)}
+                 </div>
+                 <div>
+                   <h2 className="text-2xl font-bold text-white tracking-widest leading-none">{selectedUser.name.toUpperCase()}</h2>
+                   <div className="flex items-center gap-2 mt-1">
+                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                     <span className="text-[10px] text-green-500 font-mono tracking-widest">LIVE FEED</span>
+                   </div>
+                 </div>
+                 {/* Opponent Tags */}
+                 {opponentTags.length > 0 && (
+                   <div className="flex flex-wrap gap-1 ml-4">
+                     {opponentTags.map((tag, i) => (
+                       <span key={i} className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border rounded ${
+                         selectedUser.isReal 
+                           ? 'bg-green-900/30 text-green-400 border-green-800' 
+                           : 'bg-purple-900/30 text-purple-400 border-purple-800'
+                       }`}>
+                         {tag}
+                       </span>
+                     ))}
+                   </div>
+                 )}
+               </div>
+               <button onClick={resetGame} className="text-xs text-red-500 border border-red-900 px-4 py-2 hover:bg-red-950 uppercase tracking-widest transition-colors">
+                 Term. Link
+               </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              {currentMessages.map((message) => (
+                <div key={message.id} className={`flex ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`relative max-w-2xl p-6 ${
+                    message.isUserMessage 
+                      ? 'bg-cyan-950/30 border-r-4 border-cyan-500' 
+                      : 'bg-slate-800/50 border-l-4 border-purple-500'
+                  }`}>
+                    <p className="text-lg leading-relaxed font-light text-slate-200">{message.text}</p>
+                    <span className="text-[10px] text-slate-500 uppercase mt-2 block font-bold tracking-widest">
+                      {message.timestamp.toLocaleTimeString([], {hour12: false})} // {message.sender}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="text-xs text-slate-500 animate-pulse pl-4 font-mono">&gt; INCOMING DATA STREAM...</div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="p-8 bg-slate-900 border-t border-slate-800 shrink-0">
+              <form onSubmit={handleSendMessage} className="flex gap-0 border border-slate-600 focus-within:border-cyan-500 transition-colors">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  disabled={gameState !== 'playing' || !canSendHuman} 
+                  placeholder={gameState === 'playing' ? "Type to transmit..." : "CONNECTION TERMINATED"}
+                  className="flex-1 bg-black text-white px-6 py-4 focus:outline-none font-mono text-lg disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-slate-600"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || gameState !== 'playing' || !canSendHuman}
+                  className="bg-slate-800 text-cyan-400 px-8 font-bold hover:bg-cyan-900 disabled:opacity-50 uppercase tracking-widest border-l border-slate-600"
+                >
+                  Send
+                </button>
+              </form>
+            </div>
+        </div>
+      )}
+
+      {/* JUDGING MODAL */}
+      {gameState === 'judging' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
+          <div className="w-full max-w-3xl p-12 border-4 border-red-600 bg-slate-950 text-center relative shadow-[0_0_100px_rgba(220,38,38,0.5)]">
+            <h2 className="text-5xl font-black text-red-600 mb-6 tracking-widest uppercase animate-pulse">System Critical</h2>
+            <div className="w-full h-px bg-red-900 mb-8"></div>
+            <p className="text-2xl text-slate-300 mb-12 font-light">
+              Oxygen reserves depleted. Airlock controls active.<br/>
+              Identify the Subject.
+            </p>
+            <div className="grid grid-cols-2 gap-8">
+              <button onClick={() => handleVote('AI')} className="h-40 border-2 border-purple-600 hover:bg-purple-900/30 text-purple-500 hover:text-purple-300 font-bold text-3xl uppercase tracking-widest transition-all">
+                SYNTHETIC<br/><span className="text-sm font-normal opacity-70 block mt-2">(Purge)</span>
               </button>
-            )}
-            <button className="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full">Settings</button>
-          </div>
-        </div>
-
-        {/* Profile Card */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6">
-            {/* Avatar */}
-            <div className="flex justify-center mb-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-5xl shadow-lg">
-                {userProfile?.avatar || '👤'}
-              </div>
-            </div>
-
-            {/* Profile Info */}
-            <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-gray-800 mb-1">
-                  {userProfile?.name || 'N/A'}
-                </h3>
-                <p className="text-sm text-gray-500">{userProfile?.email || 'Logged in as ' + userName}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <div className="mb-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Bio</label>
-                  <p className="text-gray-700 mt-1">
-                    {userProfile?.bio || 'No bio available'}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Member Since</label>
-                  <p className="text-gray-700 mt-1">
-                    {userProfile?.joinDate || 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="border-t border-gray-200 pt-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600">127</div>
-                    <div className="text-xs text-gray-500">Messages</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-purple-600">{allUsers.length}</div>
-                    <div className="text-xs text-gray-500">Contacts</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-pink-600">42</div>
-                    <div className="text-xs text-gray-500">Chats</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="border-t border-gray-200 pt-4 space-y-2">
-                <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
-                  Edit Profile
-                </button>
-                <button className="w-full bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                  Settings
-                </button>
-              </div>
+              <button onClick={() => handleVote('Human')} className="h-40 border-2 border-green-600 hover:bg-green-900/30 text-green-500 hover:text-green-300 font-bold text-3xl uppercase tracking-widest transition-all">
+                HUMAN<br/><span className="text-sm font-normal opacity-70 block mt-2">(Rescue)</span>
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Additional Info Card */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">📌 How It Works</h4>
-            <p className="text-sm text-blue-800">
-              • Chat with <strong>Cute</strong> (AI) to test the AI persona.<br/>
-              • Real users appear with a <span className="text-green-700 font-semibold">Human</span> badge.<br/>
-              • Click a human user to send a chat request.
-            </p>
-          </div>
-
-          {/* Debug Info */}
-          <div className="mt-4 bg-gray-50 border border-gray-300 rounded-xl p-3">
-            <h4 className="font-semibold text-gray-700 text-xs mb-1">🔍 Debug Info</h4>
-            <p className="text-xs text-gray-600">
-              Logged in as: <strong>{userName}</strong><br/>
-              Total users: {allUsers.length}<br/>
-              Session: {activeSessionId || 'None'}<br/>
-              Open browser console (F12) for detailed logs
-            </p>
+      {/* RESULT MODAL */}
+      {gameState === 'result' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black animate-in zoom-in duration-500">
+          <div className="text-center p-10 border border-slate-800 bg-slate-900/50 backdrop-blur max-w-2xl">
+            <h2 className={`text-8xl font-black mb-8 uppercase tracking-tighter drop-shadow-lg ${gameResult === 'won' ? 'text-green-500' : 'text-red-600'}`}>
+              {gameResult === 'won' ? 'SURVIVED' : 'KILLED'}
+            </h2>
+            <div className="text-2xl text-slate-400 font-mono mb-12">
+              SUBJECT IDENTITY: <span className={`font-bold ${selectedUser?.isReal ? 'text-green-400' : 'text-purple-400'}`}>{selectedUser?.isReal ? 'BIOLOGICAL' : 'SYNTHETIC'}</span>
+            </div>
+            <button onClick={resetGame} className="px-10 py-4 bg-white text-black font-black text-xl hover:bg-cyan-400 hover:scale-105 transition-all uppercase tracking-widest">
+              RESTART SIMULATION
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
