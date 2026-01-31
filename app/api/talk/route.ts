@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Pusher not configured' }, { status: 500 });
     }
 
-    const { action, sessionId, sender, content, role, fromUser, targetUser } = await req.json();
+    const { action, sessionId, sender, content, role, fromUser, targetUser, tags } = await req.json();
 
     if (action === 'invite' || action === 'accept') {
       if (!fromUser || !targetUser || !sessionId) {
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         targetUser,
         sessionId,
         timestamp: Date.now(),
+        tags: tags || [], // Pass user tags to opponent
       };
 
       console.log('📡 Triggering lobby event:', eventName, payload);

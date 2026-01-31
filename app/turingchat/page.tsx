@@ -113,7 +113,21 @@ interface Invite {
   targetUser: string;
   sessionId: string;
   timestamp?: number;
-} 
+  tags?: string[];
+}
+
+// Helper: Get random 1-4 tags from AI profile
+const getRandomTags = (profile: any): string[] => {
+  const allTags: string[] = [];
+  if (profile?.shortTags) allTags.push(...profile.shortTags);
+  if (profile?.interests) allTags.push(...profile.interests);
+  if (profile?.personality) allTags.push(profile.personality);
+  if (profile?.occupation) allTags.push(profile.occupation);
+  if (allTags.length === 0) return ['mysterious'];
+  const shuffled = allTags.sort(() => Math.random() - 0.5);
+  const count = Math.floor(Math.random() * 4) + 1; // 1-4 tags
+  return shuffled.slice(0, count);
+};
 
 // ========== Main Component ==========
 export default function Home() {
@@ -136,6 +150,11 @@ export default function Home() {
   const [activeInvite, setActiveInvite] = useState<Invite | null>(null);
   const [waitingForAccept, setWaitingForAccept] = useState<string | null>(null); // Show "waiting" UI
   const [aiHandshakeUser, setAiHandshakeUser] = useState<string | null>(null);
+  
+  // --- User Tags ---
+  const [userTags, setUserTags] = useState<string[]>([]); // Player's own tags
+  const [tagInput, setTagInput] = useState(''); // Input field for adding tags
+  const [opponentTags, setOpponentTags] = useState<string[]>([]); // Tags to show in chat
   
   // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -338,7 +357,7 @@ export default function Home() {
     presenceChannel.bind('chat-request', (data: any) => {
       console.log('[Invite] Received chat-request:', data);
       if (data.targetUser === userName) {
-        const invite: Invite = { fromUser: data.fromUser, targetUser: data.targetUser, sessionId: data.sessionId, timestamp: Date.now() };
+        const invite: Invite = { fromUser: data.fromUser, targetUser: data.targetUser, sessionId: data.sessionId, timestamp: Date.now(), tags: data.tags || [] };
         setActiveInvite(invite);
       }
     });
@@ -348,6 +367,7 @@ export default function Home() {
       if (data.targetUser === userName) {
         setWaitingForAccept(null);
         setActiveSessionId(data.sessionId);
+        setOpponentTags(data.tags || []); // Store opponent's tags
         const targetUser = allUsersRef.current.find(u => u.name === data.fromUser);
         if (targetUser) {
           setSelectedUser(targetUser);
@@ -423,6 +443,7 @@ export default function Home() {
             fromUser: userName,
             targetUser: user.name,
             sessionId: sharedSessionId,
+            tags: userTags, // Send our tags to opponent
           }),
         }).catch((e) => {
           console.error('[Invite] Failed to send invite:', e);
@@ -430,6 +451,8 @@ export default function Home() {
           alert('Invite failed. Please try again.');
         });
       } else {
+        // For AI: pick random tags from their profile
+        setOpponentTags(getRandomTags(user.profile));
         startAISessionWithHandshake(user);
       }
   };
@@ -550,6 +573,7 @@ export default function Home() {
     if (!invite) return;
     console.log('[Invite] Accepting invite:', invite);
     setActiveSessionId(invite.sessionId);
+    setOpponentTags(invite.tags || []); // Store inviter's tags
 
     fetch('/api/talk', {
       method: 'POST',
@@ -559,6 +583,7 @@ export default function Home() {
         fromUser: userName,
         targetUser: invite.fromUser,
         sessionId: invite.sessionId,
+        tags: userTags, // Send our tags back
       }),
     }).catch((e) => console.error('[Invite] Failed to accept invite:', e));
 
@@ -591,6 +616,7 @@ export default function Home() {
     setActiveSessionId('');
     setIsTyping(false);
     setAiHandshakeUser(null);
+    setOpponentTags([]);
     hasSignaledJudgingRef.current = false;
     // End session logic here if needed
   };
@@ -731,6 +757,29 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-4 mb-4">
+              <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider mb-3 border-b border-slate-800 pb-2">Your Tags</h4>
+              <div className="flex flex-wrap gap-1 mb-3 min-h-[24px]">
+                {userTags.map((tag, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-cyan-900/50 text-cyan-400 text-[10px] uppercase tracking-wider border border-cyan-800 rounded flex items-center gap-1">
+                    {tag}
+                    <button onClick={() => setUserTags(prev => prev.filter((_, idx) => idx !== i))} className="text-cyan-600 hover:text-red-400">×</button>
+                  </span>
+                ))}
+                {userTags.length === 0 && <span className="text-slate-600 text-[10px]">No tags yet...</span>}
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); if (tagInput.trim() && userTags.length < 6) { setUserTags(prev => [...prev, tagInput.trim()]); setTagInput(''); }}} className="flex gap-1">
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Add tag..."
+                  maxLength={20}
+                  className="flex-1 px-2 py-1 bg-slate-950 border border-slate-700 rounded text-[10px] text-cyan-400 placeholder:text-slate-600 focus:border-cyan-600 focus:outline-none"
+                />
+                <button type="submit" disabled={userTags.length >= 6} className="px-2 py-1 bg-cyan-900 text-cyan-400 text-[10px] rounded hover:bg-cyan-800 disabled:opacity-50">+</button>
+              </form>
+            </div>
+
             <div className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-4">
               <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider mb-2">Mission</h4>
               <p className="text-slate-500 text-xs leading-relaxed">
@@ -744,7 +793,14 @@ export default function Home() {
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
                 <div className="w-96 border-4 border-cyan-500 bg-slate-900 p-8 text-center animate-pulse shadow-[0_0_50px_rgba(6,182,212,0.5)]">
                     <h3 className="text-2xl font-bold text-cyan-400 mb-4">INCOMING TRANSMISSION</h3>
-                    <p className="text-slate-300 mb-8">Signal detected from: <br/><span className="text-white text-xl font-bold">{activeInvite.fromUser}</span></p>
+                    <p className="text-slate-300 mb-4">Signal detected from: <br/><span className="text-white text-xl font-bold">{activeInvite.fromUser}</span></p>
+                    {activeInvite.tags && activeInvite.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-center mb-6">
+                        {activeInvite.tags.map((tag, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-green-900/30 text-green-400 text-[10px] uppercase tracking-wider border border-green-800 rounded">{tag}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-4 justify-center">
                         <button onClick={() => setActiveInvite(null)} className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Ignore</button>
                         <button onClick={() => acceptInvite(activeInvite)} className="px-6 py-3 bg-cyan-600 text-black hover:bg-cyan-400 font-bold uppercase">Accept</button>
@@ -811,6 +867,20 @@ export default function Home() {
                      <span className="text-[10px] text-green-500 font-mono tracking-widest">LIVE FEED</span>
                    </div>
                  </div>
+                 {/* Opponent Tags */}
+                 {opponentTags.length > 0 && (
+                   <div className="flex flex-wrap gap-1 ml-4">
+                     {opponentTags.map((tag, i) => (
+                       <span key={i} className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border rounded ${
+                         selectedUser.isReal 
+                           ? 'bg-green-900/30 text-green-400 border-green-800' 
+                           : 'bg-purple-900/30 text-purple-400 border-purple-800'
+                       }`}>
+                         {tag}
+                       </span>
+                     ))}
+                   </div>
+                 )}
                </div>
                <button onClick={resetGame} className="text-xs text-red-500 border border-red-900 px-4 py-2 hover:bg-red-950 uppercase tracking-widest transition-colors">
                  Term. Link
