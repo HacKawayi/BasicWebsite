@@ -5,6 +5,14 @@ import Link from 'next/link';
 import GraphNode from '../components/GraphNode';
 import GraphEdge from '../components/GraphEdge';
 
+const styles = `
+  @keyframes tunnel-dive { 0% { opacity: 0; transform: scale(0.5); } 50% { opacity: 0.5; } 100% { opacity: 0; transform: scale(2); } }
+  .scanlines {
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.3));
+    background-size: 100% 4px;
+  }
+`;
+
 type GraphNode2 = {
   id: string;
   label: string;
@@ -12,74 +20,67 @@ type GraphNode2 = {
   y: number;
 };
 
-type Edge = {
-  from: string;
-  to: string;
-  id: number;
+type HistoryState = {
+  path: string[];
+  cost: number;
 };
 
+const OPTIMAL_COST = 11;
+
 const NODES: GraphNode2[] = [
+  { id: 'START', label: 'S', x: 100, y: 200 },
   { id: 'A', label: 'A', x: 250, y: 100 },
-  { id: 'B', label: 'B', x: 400, y: 150 },
-  { id: 'C', label: 'C', x: 350, y: 300 },
-  { id: 'D', label: 'D', x: 150, y: 300 },
-  { id: 'E', label: 'E', x: 100, y: 150 },
+  { id: 'B', label: 'B', x: 250, y: 300 },
+  { id: 'C', label: 'C', x: 400, y: 150 },
+  { id: 'TARGET', label: 'T', x: 500, y: 250 },
 ];
 
-const EDGES: Edge[] = [
-  { from: 'A', to: 'B', id: 0 },
-  { from: 'A', to: 'D', id: 1 },
-  { from: 'C', to: 'D', id: 2 },
-  { from: 'D', to: 'E', id: 3 },
-  { from: 'E', to: 'A', id: 4 },
-  { from: 'A', to: 'C', id: 5 },
-  { from: 'B', to: 'D', id: 6 },
+const EDGES = [
+  { from: 'START', to: 'A', weight: 4 },
+  { from: 'START', to: 'B', weight: 2 },
+  { from: 'A', to: 'C', weight: 5 },
+  { from: 'B', to: 'A', weight: 1 },
+  { from: 'B', to: 'C', weight: 8 },
+  { from: 'C', to: 'TARGET', weight: 3 },
+  { from: 'B', to: 'TARGET', weight: 10 },
 ];
 
-export default function EulerianLevel() {
-  const [currentNode, setCurrentNode] = useState<string>('A');
-  const [path, setPath] = useState<string[]>(['A']);
-  const [usedEdges, setUsedEdges] = useState<number[]>([]);
+export default function DijkstraLevel() {
+  const [selectedPath, setSelectedPath] = useState<string[]>(['START']);
+  const [totalCost, setTotalCost] = useState(0);
   const [completed, setCompleted] = useState(false);
-  const [history, setHistory] = useState<{ path: string[]; usedEdges: number[] }[]>([
-    { path: ['A'], usedEdges: [] },
-  ]);
+  const [history, setHistory] = useState<HistoryState[]>([{ path: ['START'], cost: 0 }]);
 
   useEffect(() => {
-    // Check if Eulerian circuit is complete
-    if (usedEdges.length === EDGES.length && currentNode === 'A' && path.length > 1) {
-      setCompleted(true);
+    if (completed && totalCost === OPTIMAL_COST) {
       try {
         const completedRaw = typeof window !== 'undefined' ? localStorage.getItem('completed_levels') : null;
         const completedLevels: number[] = completedRaw ? JSON.parse(completedRaw) : [];
-        if (!completedLevels.includes(4)) {
-          completedLevels.push(4);
+        if (!completedLevels.includes(2)) {
+          completedLevels.push(2);
           localStorage.setItem('completed_levels', JSON.stringify(completedLevels));
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
-  }, [usedEdges, currentNode, path]);
+  }, [completed, totalCost]);
 
   const handleNodeClick = (nodeId: string) => {
     if (completed) return;
-    if (nodeId === currentNode) return;
+    if (selectedPath.includes(nodeId)) return;
 
-    // Find an unused edge connecting current node to clicked node
-    const availableEdge = EDGES.find(
-      (e) =>
-        !usedEdges.includes(e.id) &&
-        ((e.from === currentNode && e.to === nodeId) || (e.to === currentNode && e.from === nodeId))
-    );
+    const lastNode = selectedPath[selectedPath.length - 1];
+    const edge = EDGES.find((e) => e.from === lastNode && e.to === nodeId);
 
-    if (availableEdge) {
-      const newPath = [...path, nodeId];
-      const newUsedEdges = [...usedEdges, availableEdge.id];
-      setPath(newPath);
-      setUsedEdges(newUsedEdges);
-      setCurrentNode(nodeId);
-      setHistory([...history, { path: newPath, usedEdges: newUsedEdges }]);
+    if (edge) {
+      const newPath = [...selectedPath, nodeId];
+      const newCost = totalCost + edge.weight;
+      setSelectedPath(newPath);
+      setTotalCost(newCost);
+      setHistory([...history, { path: newPath, cost: newCost }]);
+
+      if (nodeId === 'TARGET') {
+        setCompleted(newCost === OPTIMAL_COST);
+      }
     }
   };
 
@@ -88,94 +89,91 @@ export default function EulerianLevel() {
     const newHistory = history.slice(0, -1);
     const lastState = newHistory[newHistory.length - 1];
     setHistory(newHistory);
-    setPath(lastState.path);
-    setUsedEdges(lastState.usedEdges);
-    setCurrentNode(lastState.path[lastState.path.length - 1]);
+    setSelectedPath(lastState.path);
+    setTotalCost(lastState.cost);
     setCompleted(false);
   };
 
   const reset = () => {
-    setCurrentNode('A');
-    setPath(['A']);
-    setUsedEdges([]);
+    setSelectedPath(['START']);
+    setTotalCost(0);
     setCompleted(false);
-    setHistory([{ path: ['A'], usedEdges: [] }]);
+    setHistory([{ path: ['START'], cost: 0 }]);
   };
 
-  const isEdgeUsed = (edgeId: number) => usedEdges.includes(edgeId);
+  const getEdgeHighlighted = (from: string, to: string) => {
+    for (let i = 0; i < selectedPath.length - 1; i++) {
+      if (selectedPath[i] === from && selectedPath[i + 1] === to) return true;
+    }
+    return false;
+  };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-purple-400 to-pink-500">
-      <div className="flex-1 p-8">
-        <Link href="/challenge" className="text-white/80 hover:text-white underline mb-4 inline-block">
-          ← Back to Challenges
-        </Link>
-        <h1 className="text-3xl font-bold text-white mb-2">Level 4: Eulerian Circuit</h1>
-        <p className="text-white/90 mb-6">
-          Find a path that visits every edge exactly once and returns to the starting node.
-        </p>
+    <div className="flex h-screen bg-black text-purple-50 font-mono">
+      <style>{styles}</style>
+      
+      <div className="absolute inset-0 overflow-hidden bg-black">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="absolute inset-0 border-[50px] border-purple-900/20 opacity-0"
+               style={{ animation: `tunnel-dive 4s linear infinite`, animationDelay: `${i * 0.8}s` }} />
+        ))}
+      </div>
+      <div className="scanlines absolute inset-0 z-10 pointer-events-none opacity-20"></div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-4 relative" style={{ height: '400px' }}>
+      <div className="relative z-20 flex-1 p-8">
+        <Link href="/challenge" className="text-purple-400 hover:text-purple-300 text-sm uppercase tracking-widest mb-4 inline-flex items-center gap-2">
+          <span>←</span> ABORT PROTOCOL
+        </Link>
+        
+        <div className="mb-6">
+          <div className="inline-block border border-purple-500/30 bg-purple-950/20 px-3 py-1 text-xs tracking-[0.2em] text-purple-400 mb-2">
+            PROTOCOL v2 // DIJKSTRA_ROUTE
+          </div>
+          <h1 className="text-3xl font-black text-white mb-2">PATHFINDING OPTIMIZATION</h1>
+          <p className="text-slate-400 text-sm">Calculate optimal infiltration route from START (S) to TARGET (T). Minimize detection cost.</p>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur border border-purple-900/50 p-6 mb-4 relative" style={{ height: '400px' }}>
           <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-            {EDGES.map((edge) => {
+            {EDGES.map((edge, i) => {
               const n1 = NODES.find((n) => n.id === edge.from);
               const n2 = NODES.find((n) => n.id === edge.to);
               if (!n1 || !n2) return null;
-              return (
-                <GraphEdge
-                  key={edge.id}
-                  x1={n1.x}
-                  y1={n1.y}
-                  x2={n2.x}
-                  y2={n2.y}
-                  highlighted={isEdgeUsed(edge.id)}
-                />
-              );
+              return <GraphEdge key={i} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} weight={edge.weight} highlighted={getEdgeHighlighted(edge.from, edge.to)} />;
             })}
           </svg>
           {NODES.map((node) => (
-            <GraphNode
-              key={node.id}
-              id={node.id}
-              label={node.label}
-              x={node.x}
-              y={node.y}
-              selected={node.id === currentNode}
-              onClick={() => handleNodeClick(node.id)}
-            />
+            <GraphNode key={node.id} id={node.id} label={node.label} x={node.x} y={node.y}
+              selected={selectedPath.includes(node.id)} onClick={() => handleNodeClick(node.id)} />
           ))}
         </div>
 
-        <div className="mt-4 bg-white/20 backdrop-blur rounded-lg p-4 text-white">
-          <div className="font-semibold mb-2">
+        <div className="mt-4 bg-slate-900/50 border border-purple-900/50 p-4">
+          <div className="font-bold mb-3 text-sm">
             {completed
-              ? '✅ Perfect! Eulerian circuit complete!'
-              : `Current Node: ${currentNode} | Edges Used: ${usedEdges.length} / ${EDGES.length}`}
+              ? <span className="text-purple-400">✓ ALGORITHM OPTIMIZED. OPTIMAL PATH: COST {totalCost}</span>
+              : <span className="text-slate-400">ROUTE: {selectedPath.join(' → ')} | COST: {totalCost}</span>}
           </div>
-          <div className="text-sm mb-2">Path: {path.join(' → ')}</div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleUndo}
-              disabled={history.length <= 1}
-              className="px-4 py-2 bg-yellow-500 text-black rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ↶ Undo
+          <div className="flex gap-3">
+            <button onClick={handleUndo} disabled={history.length <= 1}
+              className="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-400 text-xs uppercase tracking-wider hover:border-purple-500 hover:text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              ↶ UNDO
             </button>
-            <button onClick={reset} className="px-4 py-2 bg-white text-black rounded-lg font-semibold">
-              Reset
+            <button onClick={reset}
+              className="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-400 text-xs uppercase tracking-wider hover:border-red-500 hover:text-red-400 transition-all">
+              RESET PROTOCOL
             </button>
           </div>
         </div>
       </div>
 
-      <aside className="w-72 bg-white/10 p-6 backdrop-blur rounded-l-2xl">
-        <h3 className="text-white font-bold mb-2">Instructions</h3>
-        <p className="text-white/80 text-sm mb-4">
-          Click adjacent nodes to traverse edges. Use each edge exactly once and return to node A to complete the
-          circuit.
+      <aside className="relative z-20 w-72 bg-black/80 border-l border-purple-900/50 p-6 backdrop-blur-md">
+        <h3 className="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3 border-b border-purple-900/50 pb-2">MISSION PARAMETERS</h3>
+        <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+          Navigate through the Guardian defense network. Edge weights represent detection probability. Find the path with minimum total cost.
         </p>
-        <div className="bg-white/20 rounded p-3 text-white text-xs">
-          <strong>Hint:</strong> All vertices have even degree, so an Eulerian circuit exists!
+        <div className="bg-purple-900/20 border border-purple-800/50 p-3 text-xs text-purple-300">
+          <strong>TARGET:</strong> Optimal route costs {OPTIMAL_COST}. Can you find it?
         </div>
       </aside>
     </div>
