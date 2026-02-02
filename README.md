@@ -1,9 +1,10 @@
 # HacKawayi — Strategic Turing Test & Challenge 平台
 
-一个以“AI渗透与守护者攻防”为世界观的交互式 Web 平台。包含两条产品线：
+一个以“AI渗透与守护者攻防”为世界观的交互式 Web 平台。包：
 
-- TuringChat：匹配不同模型生成的虚拟角色，进行流式对话并做“AI/人类”判断。
-- Challenge：以关卡形式呈现“AI如何计算最优路径、避开守卫并突破高墙”的策略与算法挑战。
+- TuringChat：匹配不同模型生成的虚拟角色，进行流式对话并做“AI/人类”判断。（守护者视角）
+  同时，信徒视角下，还有
+  - Challenge：以关卡形式呈现“训练AI如何计算最优路径、避开守卫并突破高墙”的策略与算法挑战。
 
 Lore（世界观）：
 公元2026年，世界进入了AI的统治时代。随着人工智能的迅速发展，一部分人类深信，AI是能够实现绝对公平的工具，他们组成了一个名为“AI教”的组织，信奉AI可以创造一个完美无瑕、没有痛苦和不公的世界。这些人相信，通过完全依赖AI来统治全世界，社会将达到前所未有的公平与和谐。
@@ -65,20 +66,20 @@ PUSHER_CLUSTER=mt1
 
 ## 平台特性与玩法
 
-### TuringChat（渗透对话）
+### TuringChat（“图灵”测试）
 
 - 角色生成与匹配：`/api/match`随机生成AI玩家，赋予其名字并和守护者对话
 - 流式聊天：客户端调用 `/api/chat`，由 Provider `stream` 返回；结束时（`onFinish`）写入 `GameSession`（如配置了 MongoDB）。
-- 实时广播：使用 `/api/talk` 将人类消息推送至 Pusher 频道，用于多人或观察模式。
+- 实时广播：使用 `/api/talk` 将人类消息推送至 Pusher 频道，用于人-人对话。
 - 会话与评分：`/api/session` 管理会话生命周期；`/api/game/init` 创建；`/api/game/submit` 接收玩家“AI/人类”判断，计算分数与正确性。
 
 玩法建议：像守卫巡逻下的秘密对话。你需要在有限轮次内根据对话风格、细节与行为判断对方是否为 AI；更快做出正确判断可获得更高评分。
 
 ### Challenge（路径与突破）
 
-- 主题：在守护者的检测网络与高墙之间，AI 计算最优路径以避开发现并突破封锁。
+- 主题： 信徒为了让ai更强，不断用难题训练a,如计算最优路径以避开发现并突破封锁，将“真理”进行最优的“传递”。
 - 内容：`app/challenge` 提供 1–10 个关卡与可视化组件（`components/GraphNode.tsx`, `components/GraphEdge.tsx`），体现图/路径的策略求解与交互反馈。
-- 目标：在每个关卡中完成任务目标（例如到达安全出口、跨越障碍），体现对“最优策略”的理解与实现。
+- 目标：在每个关卡中完成任务目标（例如到达安全出口、跨越障碍）。
 
 ## 架构示意图（Mermaid）
 
@@ -109,29 +110,55 @@ flowchart TD
 ## 目录与关键文件
 
 ```
-./
-├─ app/
-│  ├─ api/
-│  │  ├─ chat/route.ts         # 流式聊天接口，路由到 Provider 或回退到 OpenAI
-│  │  ├─ match/route.ts        # 为每个模型生成与返回角色
-│  │  ├─ game/init/route.ts    # 创建会话记录
-│  │  ├─ game/submit/route.ts  # 提交猜测并计分
-│  │  ├─ session/route.ts      # 会话开始/结束
-│  │  ├─ talk/route.ts         # 人类消息通过 Pusher 广播
-│  │  └─ pusher/auth/route.ts  # Pusher 授权
-│  ├─ challenge/               # 算法挑战页面与组件
-│  ├─ turingchat/              # TuringChat 页面
-│  ├─ page.tsx                 # 首页
-│  └─ layout.tsx               # 全局布局
-├─ lib/
-│  ├─ db.ts                    # mongoose 连接封装（缓存连接）
-│  └─ aiProviders.ts           # 数据驱动的模型注册与 Provider 封装
-├─ models/
-│  └─ GameSession.ts           # mongoose schema：会话与消息记录
-├─ log/                        # 项目日志与设计文档
-├─ Dockerfile
-├─ next.config.mjs
-└─ package.json
+.
+├── .vscode
+│   └── settings.json
+├── Dockerfile
+├── README.md
+├── app
+│   ├── api
+│   │   ├── chat
+│   │   │   └── route.ts
+│   │   ├── game
+│   │   │   ├── init
+│   │   │   │   └── route.ts
+│   │   │   └── submit
+│   │   │       └── route.ts
+│   │   ├── invite
+│   │   ├── match
+│   │   │   └── route.ts
+│   │   ├── pusher
+│   │   │   └── auth
+│   │   │       └── route.ts
+│   │   ├── session
+│   │   │   └── route.ts
+│   │   └── talk
+│   │       └── route.ts
+│   ├── challenge
+│   │   ├── 1
+│   │   │   └── page.tsx
+│   │   ├── ...
+│   │   │   └── page.tsx
+│   │   ├── ...
+│   │   │   └── page.tsx
+│   │   ├── 10
+│   │   │   └── page.tsx
+│   │   ├── components
+│   │   │   ├── GraphEdge.tsx
+│   │   │   └── GraphNode.tsx
+│   │   ├── data
+│   │   │   └── levels.ts
+│   │   └── page.tsx
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── turingchat
+│       └── page.tsx
+├── lib
+│   ├── aiProviders.ts
+│   └── db.ts
+├── models
+│   └── GameSession.ts
 ```
 
 模型与 Provider：`lib/aiProviders.ts` 通过 `DEFAULT_MODELS` 统一注册模型（例如 `Qwen/Qwen2.5-7B-Instruct`、`deepseek-ai/DeepSeek-R1-0528` 等），提供 `stream` 和 `generate` 两种能力；角色生成使用 `UNIFIED_CHARACTER_PROMPT` 保持一致格式与风格。
@@ -167,8 +194,7 @@ docker run -p 3000:3000 --env-file .env hackawayi-app
 
 ## 玩法与调试建议
 
-- TuringChat：先调用 `/api/match` 选择角色 → `/api/game/init` 创建会话 → 在 UI 中聊天（路由走 `/api/chat`）→ 提交判断到 `/api/game/submit` 并查看评分。
-- Challenge：从首页进入 `Challenge`，逐关学习 Guardians 检测与高墙突破策略，理解图搜索、权重与路径优化的直观意义。
+
 - 调试：留意 Pusher 授权与频道命名；MongoDB 连接在开发模式下有缓存复用逻辑，避免连接泄漏。
 
 ## 设计意图（风格与世界观）
