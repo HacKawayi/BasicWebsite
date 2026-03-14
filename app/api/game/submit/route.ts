@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import GameSession from '@/models/GameSession';
+import { getDefaultProfilerModelId, runProfilerAnalysis } from '@/lib/gameAgents';
 
 interface SubmitRequest {
   sessionId: string;
   playerGuess: 'AI' | 'HUMAN';
   decisionTime: string;
+  playerName?: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body: SubmitRequest = await req.json();
-    const { sessionId, playerGuess, decisionTime } = body;
+    const { sessionId, playerGuess, decisionTime, playerName } = body;
 
     if (!sessionId || !playerGuess || !decisionTime) {
       return NextResponse.json(
@@ -39,9 +41,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate if the guess is correct
-    // The actual opponent is always 'AI' in this MVP
-    const isCorrect = playerGuess === 'AI';
+    // Calculate if the guess is correct against recorded opponent type
+    const isCorrect = playerGuess === session.actualOpponent;
 
     // Calculate score
     let score = 0;
@@ -71,11 +72,40 @@ export async function POST(req: NextRequest) {
       score = 0;
     }
 
+    // Collect player-authored text for profiler analysis
+    const allMessages = Array.isArray(session.messages) ? session.messages : [];
+    const playerMessagesByName = playerName
+      ? allMessages.filter((m: any) => typeof m.sender === 'string' && m.sender === playerName)
+      : [];
+
+    const fallbackUserMessages = allMessages.filter((m: any) => m.role === 'user');
+    const sourceMessages = playerMessagesByName.length > 0 ? playerMessagesByName : fallbackUserMessages;
+    const playerTexts = sourceMessages
+      .map((m: any) => (typeof m.content === 'string' ? m.content.trim() : ''))
+      .filter((text: string) => text.length > 0);
+
+    const profilerModelId = getDefaultProfilerModelId();
+    const profilerResult = await runProfilerAnalysis({
+      modelId: profilerModelId,
+      question: session.roundQuestion || '',
+      playerMessages: playerTexts,
+    });
+
+    console.log('[GameSubmit] Profiler analysis completed', {
+      sessionId,
+      playerName,
+      requestedModelId: session.profilerModelId,
+      resolvedModelId: profilerModelId,
+      usedFallback: profilerResult.usedFallback,
+      messageCount: playerTexts.length,
+    });
+
     // Update the session with the guess and score
     session.playerGuess = playerGuess;
     session.isCorrect = isCorrect;
     session.decisionTime = new Date(decisionTime);
     session.score = score;
+    session.profilerAnalysis = profilerResult.analysis;
 
     await session.save();
 
@@ -88,6 +118,10 @@ export async function POST(req: NextRequest) {
       playerGuess,
       messageCount: session.messages.length,
       sessionId,
+      question: session.roundQuestion,
+      profilerModelId,
+      profilerUsedFallback: profilerResult.usedFallback,
+      profilerAnalysis: profilerResult.analysis,
     });
   } catch (error) {
     console.error('Error in submit route:', error);

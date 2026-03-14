@@ -39,17 +39,30 @@ IMPORTANT: You are a human-like avatar who is just very "cute" in their communic
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, sessionId, personaId, systemPrompt: clientSystemPrompt, opponentInfo, modelId: clientModelId } = await req.json();
+    const {
+      messages,
+      sessionId,
+      personaId,
+      systemPrompt: clientSystemPrompt,
+      opponentInfo,
+      modelId: clientModelId,
+      roundQuestion,
+    } = await req.json();
 
     if (!sessionId) {
       return new Response('Session ID is required', { status: 400 });
     }
 
     // Determine system prompt: prefer client-provided `systemPrompt`, otherwise fall back to persona map
-    const systemPrompt = clientSystemPrompt || PERSONAS[personaId as keyof typeof PERSONAS] || PERSONAS.default;
+    const baseSystemPrompt = clientSystemPrompt || PERSONAS[personaId as keyof typeof PERSONAS] || PERSONAS.default;
+    const questionConstraint =
+      typeof roundQuestion === 'string' && roundQuestion.trim().length > 0
+        ? `\n\nCurrent round question: ${roundQuestion.trim()}\nYou must answer this question directly. Keep reply to 1-3 short sentences and do not switch topics.`
+        : '';
+    const systemPrompt = `${baseSystemPrompt}${questionConstraint}`;
 
     // Determine model ID (full string like 'Qwen/Qwen2.5-7B-Instruct')
-    const modelId: string = clientModelId || 'Qwen/Qwen2.5-7B-Instruct';
+    const modelId: string = clientModelId || 'deepseek-ai/DeepSeek-R1-0528';
 
     // Require either OpenAI or MODELSCOPE credentials
     if (!process.env.OPENAI_API_KEY && !(process.env.MODELSCOPE_API_KEY && process.env.MODELSCOPE_BASE_URL)) {
