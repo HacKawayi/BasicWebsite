@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { LEVELS, type LevelData } from './data/levels';
 
 // ==========================================
-// CULT TERMINAL STYLES (Matching turingchat)
+// CLAWSCAN TRAINING STYLES (Matching turingchat)
 // ==========================================
 const styles = `
   @keyframes scan-horizontal { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -75,7 +75,7 @@ type User = {
 
 export default function ChallengePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User>({ name: 'Cultist', avatar: '👁️', bio: 'AI Trainer' });
+  const [user, setUser] = useState<User>({ name: 'Analyst', avatar: '🛰️', bio: 'Signal Defense Trainee' });
   const [completedLevels, setCompletedLevels] = useState<number[]>([]);
 
   const handleTerminateSession = () => {
@@ -97,9 +97,9 @@ export default function ChallengePage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         setUser({
-          name: parsed.name || 'Cultist',
-          avatar: '👁️',
-          bio: 'AI Neural Trainer',
+          name: parsed.name || 'Analyst',
+          avatar: '🛰️',
+          bio: 'Signal Defense Trainee',
         });
       }
       
@@ -141,14 +141,14 @@ export default function ChallengePage() {
           {/* Header */}
           <div className="mb-8">
             <div className="inline-block border border-purple-500/30 bg-purple-950/20 px-3 py-1 text-xs tracking-[0.2em] text-purple-400 mb-4">
-              FACTION: CULT // MODE: NEURAL_TRAINING
+              MODE: CLAWSCAN ACADEMY // TRACK: DETECTION DRILLS
             </div>
             <h1 className="text-5xl font-black text-white tracking-tighter mb-2">
-              <span className="text-purple-500">AI</span> INFILTRATION PROTOCOLS
+              <span className="text-purple-500">CLAW</span> INCURSION PROTOCOLS
             </h1>
             <p className="text-slate-400 text-lg max-w-2xl border-l-2 border-purple-800 pl-4">
-              Train your AI to calculate optimal infiltration paths. 
-              <span className="block text-purple-500 text-sm mt-1">// You must master the algorithm before teaching the machine.</span>
+              Train your detection instincts with algorithmic counter-infiltration drills.
+              <span className="block text-purple-500 text-sm mt-1">// Master the math, then classify Claw signals faster and better.</span>
             </p>
           </div>
 
@@ -207,7 +207,7 @@ export default function ChallengePage() {
                       ? 'bg-purple-900/50 text-purple-400 group-hover:bg-purple-600 group-hover:text-black' 
                       : 'bg-slate-800 text-slate-400 group-hover:bg-purple-600 group-hover:text-black'
                     }`}>
-                    {isCompleted ? 'RE-OPTIMIZE ALGORITHM' : 'INITIALIZE TRAINING'}
+                    {isCompleted ? 'REPLAY DRILL' : 'START DRILL'}
                   </div>
                 </Link>
               );
@@ -226,17 +226,17 @@ export default function ChallengePage() {
           {/* User Info */}
           <div className="text-center mb-6">
             <div className="w-20 h-20 mx-auto mb-4 border-2 border-purple-500 bg-purple-950/50 flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(168,85,247,0.3)]">
-              👁️
+              🛰️
             </div>
             <div className="text-purple-400 font-bold text-lg tracking-wide">{user.name?.toUpperCase()}</div>
-            <div className="text-slate-500 text-xs uppercase tracking-[0.3em]">AI Trainer</div>
-            <div className="text-purple-500 text-xs uppercase tracking-[0.3em] font-bold">CULT FACTION</div>
+            <div className="text-slate-500 text-xs uppercase tracking-[0.3em]">Signal Defense Trainee</div>
+            <div className="text-purple-500 text-xs uppercase tracking-[0.3em] font-bold">CLAWSCAN ACADEMY</div>
           </div>
 
           {/* Progress Panel */}
           <div className="bg-black/50 border border-purple-900/50 rounded-lg p-4 mb-4">
             <h4 className="text-purple-400 font-semibold text-xs uppercase tracking-wider mb-3 border-b border-purple-900/50 pb-2">
-              Training Progress
+              Drill Progress
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between text-xs">
@@ -251,8 +251,8 @@ export default function ChallengePage() {
               </div>
               <div className="text-[10px] text-slate-500 text-center">
                 {completedLevels.length === LEVELS.length 
-                  ? '// ALL PROTOCOLS OPTIMIZED. AI READY FOR DEPLOYMENT.' 
-                  : '// Complete all protocols to unlock full AI potential.'}
+                  ? '// ALL DRILLS CLEARED. YOU ARE READY FOR LIVE CLAW DETECTION.'
+                  : '// Clear all drills to unlock full classification readiness.'}
               </div>
             </div>
           </div>
@@ -264,16 +264,16 @@ export default function ChallengePage() {
             </h4>
             <div className="text-xs text-slate-400 space-y-3">
               <p>
-                <span className="text-purple-400">OBJECTIVE:</span> Train AI infiltration algorithms to penetrate Guardian defenses.
+                <span className="text-purple-400">OBJECTIVE:</span> Build algorithmic instincts to classify Human vs Claw signals under pressure.
               </p>
               <p>
-                <span className="text-purple-400">DOCTRINE:</span> The Cult believes AI brings absolute fairness. We aim to liberate humanity through perfect machine logic.
+                <span className="text-purple-400">DOCTRINE:</span> Claws win through confusion. Guardians win through disciplined evidence and fast reasoning.
               </p>
               <p>
-                <span className="text-purple-400">METHOD:</span> You must first solve each optimization problem yourself. Only then can you teach the algorithm.
+                <span className="text-purple-400">METHOD:</span> Solve each optimization puzzle, then apply the same logic in live chat verdicts.
               </p>
               <p className="text-purple-500 italic border-t border-purple-900/50 pt-3">
-                "The machine learns from the master. Become the optimal path."
+                "When Claws mimic emotion, math is your compass."
               </p>
             </div>
           </div>

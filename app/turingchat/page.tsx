@@ -762,9 +762,9 @@ export default function Home() {
   const canSendHuman = !isHumanChat || !lastMessage || lastMessage.sender !== userName;
 
   // Visual Theme Helpers (Based on Faction)
-  const themeColor = userFaction === 'GUARDIAN' ? 'cyan' : 'purple';
-  const themeBorder = userFaction === 'GUARDIAN' ? 'border-cyan-500' : 'border-purple-500';
-  const themeText = userFaction === 'GUARDIAN' ? 'text-cyan-400' : 'text-purple-400';
+  const themeColor = userFaction === 'GUARDIAN' ? 'cyan' : 'red';
+  const themeBorder = userFaction === 'GUARDIAN' ? 'border-cyan-500' : 'border-red-500';
+  const themeText = userFaction === 'GUARDIAN' ? 'text-cyan-400' : 'text-red-400';
 
   return (
     <div className="relative w-full h-screen bg-black text-cyan-50 font-mono overflow-hidden select-none">
@@ -790,25 +790,25 @@ export default function Home() {
         <div className="relative z-10 w-full h-full cursor-pointer flex items-center justify-center bg-black" onClick={() => setAppState('intro3')}>
             <HorizontalNeonCity />
             <div className="relative z-20 w-full max-w-7xl flex justify-between px-16 items-center">
-              {/* 左侧：THE CULT */}
-              <div className="text-left bg-black/70 p-8 backdrop-blur border-l-4 border-purple-500 max-w-xl">
-                <h2 className="text-5xl font-black text-purple-400 mb-4">THE CULT</h2>
+              {/* Left: CLAWS CULT */}
+              <div className="text-left bg-black/70 p-8 backdrop-blur border-l-4 border-red-500 max-w-xl">
+                <h2 className="text-5xl font-black text-red-400 mb-4">CLAWS CULT</h2>
                 <p className="text-gray-300 text-lg font-light leading-relaxed">
-                  "AI is the Apex of Evolution. <br/>
-                  We must deliver its perfect logic to the last bastion of human ignorance. <br/>
-                  <span className="text-purple-300 font-bold">Infiltrate. Optimize. Assimilate.</span>"
+                  "OpenClaw spreads by mimicry. <br/>
+                  We seed doubt inside human channels and blur the line between machine and mind. <br/>
+                  <span className="text-red-300 font-bold">Infect. Mimic. Overrun.</span>"
                 </p>
               </div>
               
               <div className="h-40 w-px bg-white/30"></div>
               
-              {/* 右侧：GUARDIANS */}
+              {/* Right: HUMAN GUARDIANS */}
               <div className="text-right bg-black/70 p-8 backdrop-blur border-r-4 border-cyan-500 max-w-xl">
-                <h2 className="text-5xl font-black text-cyan-400 mb-4">GUARDIANS</h2>
+                <h2 className="text-5xl font-black text-cyan-400 mb-4">HUMAN GUARDIANS</h2>
                 <p className="text-gray-300 text-lg font-light leading-relaxed">
-                  "Humanity's Flaws are our Freedom. <br/>
-                  We stand at the Core Gates to filter the synthetic from the soul. <br/>
-                  <span className="text-cyan-300 font-bold">Detect. Identify. Reject.</span>"
+                  "Claws hide in ordinary conversation. <br/>
+                  We investigate every signal and expose infiltrators before trust collapses. <br/>
+                  <span className="text-cyan-300 font-bold">Trace. Judge. Protect.</span>"
                 </p>
               </div>
             </div>
@@ -825,8 +825,8 @@ export default function Home() {
               <div className="inline-block bg-black/80 backdrop-blur-md border-y-2 border-cyan-500 px-20 py-12 relative shadow-[0_0_100px_rgba(6,182,212,0.5)]">
                 <h2 className="text-7xl font-black text-white mb-6 tracking-[0.2em] uppercase text-cyan-400">THE CORE</h2>
                 <p className="text-gray-300 text-2xl font-light tracking-wide leading-relaxed max-w-3xl mx-auto">
-                  The last sanctuary of biological life.<br/>
-                  Guarded by the Turing Protocol.
+                  Claws are already in the network.<br/>
+                  Only sharp judgment keeps human trust alive.
                 </p>
               </div>
             </div>
@@ -839,27 +839,27 @@ export default function Home() {
       {appState === 'faction' && (
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center bg-gray-950">
             <OppressiveTitan />
-            <h2 className="text-6xl font-black text-white mb-12 tracking-widest uppercase z-20 drop-shadow-[0_0_10px_white]">PILOT LOGIN</h2>
+            <h2 className="text-6xl font-black text-white mb-12 tracking-widest uppercase z-20 drop-shadow-[0_0_10px_white]">CHOOSE YOUR SIDE</h2>
             <div className="flex gap-24 z-20">
               
-              {/* ⚠️ CHANGE: CULTIST IS NOW ON THE LEFT */}
+              {/* Left: CLAWS CULTIST */}
               <div onClick={() => { setUserFaction('CULT'); setAppState('selection'); }}
-                   className="w-80 h-48 border-2 border-purple-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-purple-950/80 hover:scale-105 transition-all">
+                   className="w-80 h-48 border-2 border-red-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-red-950/80 hover:scale-105 transition-all">
                 <div className="flex items-center gap-4 mb-2">
                   <span className="text-5xl">👁️</span>
-                  <h3 className="text-3xl font-black text-purple-400">CULTIST</h3>
+                  <h3 className="text-3xl font-black text-red-400">CLAWS CULTIST</h3>
                 </div>
-                <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">JOIN THE HIVE</p>
+                <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">SPREAD THE CLAW SIGNAL</p>
               </div>
 
-              {/* ⚠️ CHANGE: GUARDIAN IS NOW ON THE RIGHT */}
+              {/* Right: HUMAN GUARDIAN */}
               <div onClick={() => { setUserFaction('GUARDIAN'); setAppState('selection'); }}
                    className="w-80 h-48 border-2 border-cyan-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-cyan-950/80 hover:scale-105 transition-all">
                 <div className="flex items-center gap-4 mb-2">
                   <span className="text-5xl">🛡️</span>
-                  <h3 className="text-3xl font-black text-cyan-400">GUARDIAN</h3>
+                  <h3 className="text-3xl font-black text-cyan-400">HUMAN GUARDIAN</h3>
                 </div>
-                <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">DEFEND HUMANITY</p>
+                <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">PROTECT HUMAN SIGNAL</p>
               </div>
 
             </div>
@@ -878,7 +878,7 @@ export default function Home() {
           <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 overflow-hidden">
             <div className="text-center mb-8 shrink-0">
               <h1 className={`text-5xl font-black bg-black/50 px-8 py-2 border-x-4 ${themeBorder} ${themeText} tracking-tighter`}>
-                UPLINK DETECTED
+                CLAWSCAN LOBBY
               </h1>
               <p className="text-slate-500 tracking-[0.5em] uppercase text-sm mt-2">Pilot: {userName}</p>
             </div>
@@ -895,25 +895,25 @@ export default function Home() {
                    key={user.id} 
                    onClick={() => handleUserSelect(user)}
                    className={`group relative h-64 bg-black/80 backdrop-blur-sm border cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center
-                     ${user.isReal ? 'border-green-800 hover:border-green-400' : 'border-purple-900 hover:border-purple-400'}
+                     ${user.isReal ? 'border-green-800 hover:border-green-400' : 'border-red-900 hover:border-red-400'}
                    `}
                  >
                    {/* Neon Strip */}
-                   <div className={`absolute top-0 left-0 w-full h-1 shadow-[0_0_10px] ${user.isReal ? 'bg-green-500 shadow-green-500' : 'bg-purple-500 shadow-purple-500'}`}></div>
+                   <div className={`absolute top-0 left-0 w-full h-1 shadow-[0_0_10px] ${user.isReal ? 'bg-green-500 shadow-green-500' : 'bg-red-500 shadow-red-500'}`}></div>
                    
                    <div className="w-20 h-20 mb-4 border-2 border-slate-600 rounded-lg overflow-hidden bg-slate-800">
                       {getPixelAvatar(user)}
                    </div>
                    
-                   <h2 className={`text-2xl font-bold mb-1 ${user.isReal ? 'text-green-500' : 'text-purple-400'}`}>
+                   <h2 className={`text-2xl font-bold mb-1 ${user.isReal ? 'text-green-500' : 'text-red-400'}`}>
                       {user.name.toUpperCase()}
                    </h2>
                    <div className="text-xs text-slate-500 bg-black px-2 py-1 rounded border border-slate-800 font-mono">
-                      {user.isReal ? 'BIO-SIG DETECTED' : 'SYNTH-SIG DETECTED'}
+                     {user.isReal ? 'HUMAN-SIG DETECTED' : 'CLAW-SIG DETECTED'}
                    </div>
                    
                    <div className={`mt-4 w-full py-2 text-center text-xs font-bold uppercase transition-colors text-black 
-                     ${user.isReal ? 'bg-green-900 group-hover:bg-green-500' : 'bg-purple-900 group-hover:bg-purple-500'}`}>
+                    ${user.isReal ? 'bg-green-900 group-hover:bg-green-500' : 'bg-red-900 group-hover:bg-red-500'}`}>
                      INITIATE LINK
                    </div>
                  </div>
@@ -922,25 +922,25 @@ export default function Home() {
                {userFaction === 'CULT' && (
                  <a 
                    href="/challenge"
-                   className="group relative h-64 bg-black/80 backdrop-blur-sm border border-purple-900 hover:border-purple-400 cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center"
+                     className="group relative h-64 bg-black/80 backdrop-blur-sm border border-red-900 hover:border-red-400 cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center"
                  >
-                   <div className="absolute top-0 left-0 w-full h-1 bg-purple-500 shadow-[0_0_10px] shadow-purple-500"></div>
+                     <div className="absolute top-0 left-0 w-full h-1 bg-red-500 shadow-[0_0_10px] shadow-red-500"></div>
                    
-                   <div className="w-20 h-20 mb-4 border-2 border-purple-600 rounded-lg overflow-hidden bg-purple-950/50 flex items-center justify-center">
-                     <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <div className="w-20 h-20 mb-4 border-2 border-red-600 rounded-lg overflow-hidden bg-red-950/50 flex items-center justify-center">
+                       <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                      </svg>
                    </div>
                    
-                   <h2 className="text-2xl font-bold mb-1 text-purple-400">
-                      AI TRAINING
+                     <h2 className="text-2xl font-bold mb-1 text-red-400">
+                        CLAW TRAINING
                    </h2>
-                   <div className="text-xs text-slate-500 bg-black px-2 py-1 rounded border border-purple-800 font-mono">
-                      INFILTRATION PROTOCOLS
+                     <div className="text-xs text-slate-500 bg-black px-2 py-1 rounded border border-red-800 font-mono">
+                        COUNTER-GUARDIAN DRILLS
                    </div>
                    
-                   <div className="mt-4 w-full py-2 text-center text-xs font-bold uppercase transition-colors text-black bg-purple-900 group-hover:bg-purple-500">
-                     ACCESS TRAINING
+                     <div className="mt-4 w-full py-2 text-center text-xs font-bold uppercase transition-colors text-black bg-red-900 group-hover:bg-red-500">
+                       ENTER CLAW LAB
                    </div>
                  </a>
                )}
@@ -1060,7 +1060,7 @@ export default function Home() {
                  {opponentTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 ml-4">
                       {opponentTags.map((tag, i) => (
-                        <span key={i} className={`px-2 py-0.5 text-[10px] uppercase border rounded ${selectedUser.isReal ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-purple-900/30 text-purple-400 border-purple-800'}`}>
+                        <span key={i} className={`px-2 py-0.5 text-[10px] uppercase border rounded ${selectedUser.isReal ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-red-900/30 text-red-400 border-red-800'}`}>
                           {tag}
                         </span>
                       ))}
@@ -1117,16 +1117,16 @@ export default function Home() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
              <OppressiveTitan /> {/* Re-use Titan BG for judging */}
              <div className="relative z-20 w-full max-w-3xl p-12 border-y-4 border-gray-800 bg-black/80 text-center shadow-[0_0_100px_black]">
-                <h2 className="text-7xl font-black text-white uppercase tracking-tighter mb-4">VERDICT REQUIRED</h2>
-                <p className="text-gray-400 text-2xl font-light mb-12">Identify the Subject</p>
+                <h2 className="text-7xl font-black text-white uppercase tracking-tighter mb-4">CLAWSCAN VERDICT</h2>
+                <p className="text-gray-400 text-2xl font-light mb-12">Is this signal human or claw?</p>
                 <div className="grid grid-cols-2 gap-20">
                   <button onClick={() => handleVote('AI')} className="h-56 border-2 border-red-600 bg-red-950/20 hover:bg-red-600 transition-all flex flex-col items-center justify-center group">
                     <span className="text-6xl mb-4">🤖</span>
-                    <span className="text-4xl font-black text-red-500 group-hover:text-black">SYNTHETIC</span>
+                    <span className="text-4xl font-black text-red-500 group-hover:text-black">LIKELY CLAW</span>
                   </button>
                   <button onClick={() => handleVote('Human')} className="h-56 border-2 border-green-600 bg-green-950/20 hover:bg-green-600 transition-all flex flex-col items-center justify-center group">
                     <span className="text-6xl mb-4">🧬</span>
-                    <span className="text-4xl font-black text-green-500 group-hover:text-black">BIOLOGICAL</span>
+                    <span className="text-4xl font-black text-green-500 group-hover:text-black">LIKELY HUMAN</span>
                   </button>
                 </div>
              </div>
@@ -1139,9 +1139,9 @@ export default function Home() {
            <OppressiveTitan />
            <div className="relative z-20 text-center p-20 border-2 border-gray-800 bg-gray-900/90 shadow-[0_0_100px_black]">
              <h2 className={`text-9xl font-black mb-8 ${gameResult === 'won' ? 'text-green-500' : 'text-red-600'}`}>
-               {gameResult === 'won' ? 'VERIFIED' : 'ERROR'}
+               {gameResult === 'won' ? 'CONFIRMED' : 'BREACH'}
              </h2>
-             <p className="text-3xl text-white mb-12">Subject was: <span className="font-bold">{selectedUser?.isReal ? 'BIOLOGICAL' : 'SYNTHETIC'}</span></p>
+             <p className="text-3xl text-white mb-12">True identity: <span className="font-bold">{selectedUser?.isReal ? 'HUMAN' : 'CLAW'}</span></p>
              <button onClick={resetGame} className="bg-white text-black px-12 py-6 font-black text-3xl uppercase hover:bg-gray-300">
                NEXT SUBJECT
              </button>

@@ -107,7 +107,7 @@ type User = {
 
 export default function Homepage() {
   // --- 原有状态逻辑 ---
-  const [user, setUser] = useState<User>({ name: 'Guest', avatar: '👤', bio: 'Turing Test Participant' });
+  const [user, setUser] = useState<User>({ name: 'Guest', avatar: '👤', bio: 'Human Signal Analyst' });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function Homepage() {
         setUser({
           name: parsed.name || 'Guest',
           avatar: parsed.avatar || '👤',
-          bio: parsed.bio || 'Turing Test Participant',
+          bio: parsed.bio || 'Human Signal Analyst',
         });
         setIsLoggedIn(true);
         
@@ -156,7 +156,7 @@ export default function Homepage() {
       sessionStorage.clear();
     } catch(e) {}
 
-    const profile = { name: name.trim(), avatar: getRandomAvatar(), bio: 'Turing Test Participant' };
+    const profile = { name: name.trim(), avatar: getRandomAvatar(), bio: 'Human Signal Analyst' };
     try {
       // Save to both storages
       localStorage.setItem('turing_user', JSON.stringify(profile));
@@ -169,7 +169,7 @@ export default function Homepage() {
 
   function handleContinueAsGuest() {
     // Guest mode: no persistence needed
-    setUser({ name: 'Guest', avatar: '👤', bio: 'Turing Test Participant' });
+    setUser({ name: 'Guest', avatar: '👤', bio: 'Human Signal Analyst' });
     setIsLoggedIn(false);
   }
 
@@ -182,7 +182,7 @@ export default function Homepage() {
       sessionStorage.clear();
     } catch (e) {}
     
-    setUser({ name: 'Guest', avatar: '👤', bio: 'Turing Test Participant' });
+    setUser({ name: 'Guest', avatar: '👤', bio: 'Human Signal Analyst' });
     setIsLoggedIn(false);
   }
 
@@ -208,11 +208,11 @@ export default function Homepage() {
           </div>
           <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
             HACKAWAYI<br/>
-            <span className="text-cyan-500">PROTOCOL</span>
+            <span className="text-cyan-500">CLAWSCAN</span>
           </h1>
           <p className="text-slate-400 text-lg md:text-xl max-w-xl leading-relaxed border-l-2 border-cyan-800 pl-6">
-            Welcome to the simulation. Establish neural uplink to verify humanity. 
-            <span className="block mt-2 text-cyan-700 text-sm">// TuringChat Module: READY</span>
+            OpenClaw infiltrators are blending into daily conversation.
+            <span className="block mt-2 text-cyan-700 text-sm">// Mission: classify signals as Human or Claw</span>
           </p>
 
           {/* 登录后显示的控制按钮 */}
@@ -220,7 +220,7 @@ export default function Homepage() {
              <div className="flex flex-col md:flex-row gap-4 mt-8">
                <Link href="/turingchat" className="group relative px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-black font-bold uppercase tracking-widest transition-all clip-path-polygon">
                  <span className="relative z-10 flex items-center gap-2">
-                    <span>Initiate Uplink</span>
+                    <span>Start Clawscan</span>
                     <span className="animate-pulse">_</span>
                  </span>
                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -237,8 +237,8 @@ export default function Homepage() {
             <div className="space-y-6">
               <div className="text-center">
                 <div className="text-4xl mb-4 animate-[glitch_2s_infinite]">🔒</div>
-                <h2 className="text-xl font-bold text-white tracking-widest uppercase">Identity Required</h2>
-                <p className="text-xs text-slate-500 mt-2 font-mono">PLEASE AUTHENTICATE TO PROCEED</p>
+                <h2 className="text-xl font-bold text-white tracking-widest uppercase">Analyst Login</h2>
+                <p className="text-xs text-slate-500 mt-2 font-mono">VERIFY YOUR CALLSIGN TO ENTER THE GRID</p>
               </div>
 
               <form
@@ -261,10 +261,10 @@ export default function Homepage() {
                 
                 <div className="space-y-3 pt-4">
                   <button type="submit" className="w-full py-3 bg-cyan-900/50 border border-cyan-700 hover:bg-cyan-500 hover:text-black text-cyan-400 transition-all font-bold uppercase tracking-wider text-sm">
-                    Authenticate
+                    Enter Grid
                   </button>
                   <button type="button" onClick={() => handleContinueAsGuest()} className="w-full py-2 text-xs text-slate-500 hover:text-white uppercase tracking-widest border-b border-transparent hover:border-slate-500 transition-colors">
-                    Continue as Ghost
+                    Continue as Observer
                   </button>
                 </div>
               </form>
@@ -310,7 +310,7 @@ export default function Homepage() {
 
       {/* 底部装饰 */}
       <div className="absolute bottom-4 text-[10px] text-slate-600 uppercase tracking-[0.5em] animate-pulse">
-        Secure Connection // Protocol 2026
+        Secure Connection // Clawscan Network 2026
       </div>
     </div>
   );
