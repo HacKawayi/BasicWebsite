@@ -308,6 +308,17 @@ export default function Homepage() {
 
       </main>
 
+      {/* 查看详情按钮 */}
+      <div className="relative z-20 mt-12">
+        <Link href="/details" className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold uppercase tracking-widest transition-all rounded-lg shadow-lg hover:shadow-xl">
+          <span className="relative z-10 flex items-center gap-2">
+            查看详情
+            <span className="animate-pulse">→</span>
+          </span>
+          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity rounded-lg"></div>
+        </Link>
+      </div>
+
       {/* 底部装饰 */}
       <div className="absolute bottom-4 text-[10px] text-slate-600 uppercase tracking-[0.5em] animate-pulse">
         Secure Connection // Protocol 2026
