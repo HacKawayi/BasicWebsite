@@ -31,10 +31,35 @@ export type AgentRole = 'architect' | 'profiler';
 export const DEFAULT_MODELS: ModelConfig[] = [
   {
     modelId: 'Qwen/Qwen3.5-27B',
-    displayName: 'Qwen/Qwen3.5-27B',
+    displayName: 'Qwen',
     maxOutputTokens: 300,
     temperature: 0.7,
   },
+   {
+    modelId: 'Qwen/Qwen3-8B',
+    displayName: 'Qwen',
+    maxOutputTokens: 300,
+    temperature: 0.7,
+  },
+   {
+    modelId: 'Qwen/Qwen3-32B',
+    displayName: 'Qwen',
+    maxOutputTokens: 300,
+    temperature: 0.7,
+  },
+   {
+    modelId: 'Qwen/Qwen3-4B',
+    displayName: 'Qwen',
+    maxOutputTokens: 300,
+    temperature: 0.7,
+  },
+   {
+    modelId: 'Qwen/Qwen3-0.6B',
+    displayName: 'Qwen',
+    maxOutputTokens: 300,
+    temperature: 0.7,
+  },
+
   // {
   //   modelId: 'meituan-longcat/LongCat-Flash-Lite',
   //   displayName: 'LongCat',

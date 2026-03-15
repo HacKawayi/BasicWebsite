@@ -33,4 +33,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-ms_deploy.json
+# ms_deploy.json
