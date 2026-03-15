@@ -159,7 +159,7 @@ export default function CPPLevel() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-purple-50 font-mono select-none">
+    <div className="flex min-h-screen h-[100dvh] flex-col md:flex-row bg-black text-purple-50 font-mono select-none">
       <style>{styles}</style>
       
       {/* Visual Effects */}
@@ -172,7 +172,7 @@ export default function CPPLevel() {
       <div className="scanlines absolute inset-0 z-10 pointer-events-none opacity-20"></div>
 
       {/* Main Interface */}
-      <div className="relative z-20 flex-1 p-8 flex flex-col">
+      <div className="relative z-20 flex-1 p-4 md:p-8 flex flex-col">
         <Link href="/challenge" className="text-purple-400 hover:text-purple-300 text-sm uppercase tracking-widest mb-4 inline-flex items-center gap-2 w-fit">
           <span>←</span> ABORT PILGRIMAGE
         </Link>
@@ -181,7 +181,7 @@ export default function CPPLevel() {
           <div className="inline-block border border-purple-500/30 bg-purple-950/20 px-3 py-1 text-xs tracking-[0.2em] text-purple-400 mb-2 glow-text">
             PROTOCOL v9 // THE_PILGRIMAGE
           </div>
-          <h1 className="text-3xl font-black text-white mb-1">ROUTE OPTIMIZATION</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-white mb-1">ROUTE OPTIMIZATION</h1>
           <p className="text-slate-400 text-sm">Traverse every connection (edge) at least once. Return to origin. Minimize repetition.</p>
         </div>
 
@@ -279,7 +279,7 @@ export default function CPPLevel() {
       </div>
 
       {/* Sidebar Lore */}
-      <aside className="relative z-20 w-80 bg-black/80 border-l border-purple-900/50 p-6 backdrop-blur-md flex flex-col justify-center">
+      <aside className="relative z-20 w-full md:w-80 bg-black/80 border-t md:border-t-0 md:border-l border-purple-900/50 p-4 md:p-6 backdrop-blur-md flex flex-col justify-center">
         <div className="mb-8">
           <h3 className="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3 border-b border-purple-900/50 pb-2">
             CULTIST DOCTRINE

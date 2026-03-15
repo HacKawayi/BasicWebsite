@@ -125,7 +125,7 @@ export default function BipartiteLevel() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-purple-50 font-mono">
+    <div className="flex min-h-screen h-[100dvh] flex-col md:flex-row bg-black text-purple-50 font-mono">
       <style>{styles}</style>
       
       {/* Background */}
@@ -137,7 +137,7 @@ export default function BipartiteLevel() {
       </div>
       <div className="scanlines absolute inset-0 z-10 pointer-events-none opacity-20"></div>
 
-      <div className="relative z-20 flex-1 p-8">
+      <div className="relative z-20 flex-1 p-4 md:p-8">
         <Link href="/challenge" className="text-purple-400 hover:text-purple-300 text-sm uppercase tracking-widest mb-4 inline-flex items-center gap-2">
           <span>←</span> ABORT PROTOCOL
         </Link>
@@ -146,7 +146,7 @@ export default function BipartiteLevel() {
           <div className="inline-block border border-purple-500/30 bg-purple-950/20 px-3 py-1 text-xs tracking-[0.2em] text-purple-400 mb-2">
             PROTOCOL v3 // BIPARTITE_MATCH
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">AGENT ASSIGNMENT OPTIMIZATION</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-white mb-2">AGENT ASSIGNMENT OPTIMIZATION</h1>
           <p className="text-slate-400 text-sm">Match infiltration agents (A) to Guardian sectors (B). Maximize coverage.</p>
         </div>
 
@@ -198,7 +198,7 @@ export default function BipartiteLevel() {
         </div>
       </div>
 
-      <aside className="relative z-20 w-72 bg-black/80 border-l border-purple-900/50 p-6 backdrop-blur-md">
+      <aside className="relative z-20 w-full md:w-72 bg-black/80 border-t md:border-t-0 md:border-l border-purple-900/50 p-4 md:p-6 backdrop-blur-md">
         <h3 className="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3 border-b border-purple-900/50 pb-2">MISSION PARAMETERS</h3>
         <p className="text-slate-400 text-xs mb-4 leading-relaxed">
           Assign each infiltration agent to a compatible Guardian sector. Valid connections are displayed. Each agent can only be assigned once.
