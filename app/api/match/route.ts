@@ -6,6 +6,8 @@
  * No conditional logic based on model names.
  */
 
+export const maxDuration = 90;
+
 import { NextResponse } from 'next/server';
 import { DEFAULT_MODELS , createProviderById , UNIFIED_CHARACTER_PROMPT } from '@/lib/aiProviders';
 
