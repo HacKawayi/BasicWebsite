@@ -267,15 +267,10 @@ interface Message {
 }
 
 interface ProfilerAnalysis {
-  machineLikeness: number;
-  rationality: number;
-  emotionalSaturation: number;
-  cognitiveBias: number;
-  linguisticFingerprint?: {
-    fluencyBias: number;
-    lexicalDivergence: number;
-    humanMarkers: string[];
-  };
+  instinct: number; // 底层动力：主动生存vs被动反应
+  empathy: number; // 情绪体验：共情体验vs语意映射
+  creativity: number; // 思维方式：发散创造vs理性计算
+  authenticity: number; // 成长轨迹：实体生命vs数据拟合
   summary: string;
   evidence: string[];
 }
@@ -1354,16 +1349,11 @@ export default function Home() {
                  <h3 className="text-lg font-bold text-cyan-300 mb-3 uppercase tracking-wider">Profiler Report</h3>
                  <p className="text-slate-300 text-sm mb-4">{profilerAnalysis.summary}</p>
                  <div className="grid grid-cols-2 gap-3 text-xs text-slate-200 mb-4">
-                   <div>Machine Likeness: <span className="text-cyan-300 font-bold">{profilerAnalysis.machineLikeness}</span></div>
-                   <div>Rationality: <span className="text-cyan-300 font-bold">{profilerAnalysis.rationality}</span></div>
-                   <div>Emotional Saturation: <span className="text-cyan-300 font-bold">{profilerAnalysis.emotionalSaturation}</span></div>
-                   <div>Cognitive Bias: <span className="text-cyan-300 font-bold">{profilerAnalysis.cognitiveBias}</span></div>
+                   <div>底层动力 (Instinct): <span className="text-cyan-300 font-bold">{profilerAnalysis.instinct}</span></div>
+                   <div>情绪体验 (Empathy): <span className="text-cyan-300 font-bold">{profilerAnalysis.empathy}</span></div>
+                   <div>思维方式 (Creativity): <span className="text-cyan-300 font-bold">{profilerAnalysis.creativity}</span></div>
+                   <div>成长轨迹 (Authenticity): <span className="text-cyan-300 font-bold">{profilerAnalysis.authenticity}</span></div>
                  </div>
-                 {profilerAnalysis.linguisticFingerprint && (
-                   <div className="text-xs text-slate-300">
-                     Fluency Bias: {profilerAnalysis.linguisticFingerprint.fluencyBias} | Lexical Divergence: {profilerAnalysis.linguisticFingerprint.lexicalDivergence}
-                   </div>
-                 )}
                </div>
              )}
              <button onClick={resetGame} className="bg-white text-black px-12 py-6 font-black text-3xl uppercase hover:bg-gray-300">
