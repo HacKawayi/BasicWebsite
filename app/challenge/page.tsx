@@ -128,32 +128,32 @@ export default function ChallengePage() {
   };
 
   return (
-    <div className="relative h-screen w-full bg-black text-purple-50 font-mono overflow-hidden select-none">
+    <div className="relative min-h-screen h-[100dvh] w-full bg-black text-purple-50 font-mono overflow-hidden select-none">
       <style>{styles}</style>
       
       {/* Background */}
       <NeuralNetworkBg />
       <div className="scanlines absolute inset-0 z-10 pointer-events-none opacity-20"></div>
 
-      <div className="relative z-20 flex h-full">
+      <div className="relative z-20 flex h-full flex-col md:flex-row overflow-y-auto md:overflow-hidden">
         {/* Main Content */}
-        <div className="flex-1 p-8 overflow-y-auto">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="inline-block border border-purple-500/30 bg-purple-950/20 px-3 py-1 text-xs tracking-[0.2em] text-purple-400 mb-4">
               FACTION: CULT // MODE: NEURAL_TRAINING
             </div>
-            <h1 className="text-5xl font-black text-white tracking-tighter mb-2">
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-2">
               <span className="text-purple-500">AI</span> INFILTRATION PROTOCOLS
             </h1>
-            <p className="text-slate-400 text-lg max-w-2xl border-l-2 border-purple-800 pl-4">
+            <p className="text-slate-400 text-base md:text-lg max-w-2xl border-l-2 border-purple-800 pl-4">
               Train your AI to calculate optimal infiltration paths. 
               <span className="block text-purple-500 text-sm mt-1">// You must master the algorithm before teaching the machine.</span>
             </p>
           </div>
 
           {/* Protocol Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
             {LEVELS.map((level) => {
               const isCompleted = completedLevels.includes(level.id);
               const diffStyle = getDifficultyStyle(level.difficulty);
@@ -162,7 +162,7 @@ export default function ChallengePage() {
                 <Link
                   key={level.id}
                   href={level.route}
-                  className={`group relative block bg-black/80 backdrop-blur-sm border-2 p-6 transition-all duration-300 hover:scale-[1.02] overflow-hidden
+                  className={`group relative block bg-black/80 backdrop-blur-sm border-2 p-4 md:p-6 transition-all duration-300 hover:scale-[1.02] overflow-hidden
                     ${isCompleted ? 'border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)]' : 'border-slate-800 hover:border-purple-600'}
                     ${level.difficulty === 'fatal' ? 'animate-pulse' : ''}
                   `}
@@ -189,7 +189,7 @@ export default function ChallengePage() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
                     {level.title}
                   </h3>
                   
@@ -202,7 +202,7 @@ export default function ChallengePage() {
                   </p>
 
                   {/* Action Button */}
-                  <div className={`mt-4 py-2 text-center text-xs font-bold uppercase transition-all
+                  <div className={`mt-4 py-3 min-h-[44px] text-center text-xs font-bold uppercase transition-all
                     ${isCompleted 
                       ? 'bg-purple-900/50 text-purple-400 group-hover:bg-purple-600 group-hover:text-black' 
                       : 'bg-slate-800 text-slate-400 group-hover:bg-purple-600 group-hover:text-black'
@@ -222,10 +222,10 @@ export default function ChallengePage() {
         </div>
 
         {/* Right Sidebar - Cult Status Panel */}
-        <aside className="w-80 bg-black/80 border-l border-purple-900/50 p-6 backdrop-blur-md flex flex-col">
+        <aside className="w-full md:w-80 bg-black/80 border-t md:border-t-0 md:border-l border-purple-900/50 p-4 md:p-6 backdrop-blur-md flex flex-col">
           {/* User Info */}
           <div className="text-center mb-6">
-            <div className="w-20 h-20 mx-auto mb-4 border-2 border-purple-500 bg-purple-950/50 flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 border-2 border-purple-500 bg-purple-950/50 flex items-center justify-center text-3xl md:text-4xl shadow-[0_0_30px_rgba(168,85,247,0.3)]">
               👁️
             </div>
             <div className="text-purple-400 font-bold text-lg tracking-wide">{user.name?.toUpperCase()}</div>

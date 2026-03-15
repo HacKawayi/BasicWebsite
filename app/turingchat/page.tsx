@@ -185,20 +185,20 @@ const QuantumServer = () => (
 // 📡 Hyper Search (Transition to Chat)
 const HyperSearch = () => (
   <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center pointer-events-none bg-black/90 backdrop-blur-xl">
-    <div className="relative w-[500px] h-[300px] border-y-2 border-cyan-800 bg-black flex flex-col items-center justify-center p-8 overflow-hidden shadow-2xl">
+    <div className="relative w-[90%] max-w-[500px] h-[240px] md:h-[300px] border-y-2 border-cyan-800 bg-black flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden shadow-2xl">
       <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-500"></div>
       <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-500"></div>
       
-      <div className="flex items-center gap-8 w-full justify-center mb-8">
-        <div className="w-16 h-16 border-t-2 border-l-2 border-cyan-500 rounded-full animate-[hud-spin_1s_linear_infinite]"></div>
+      <div className="flex items-center gap-4 md:gap-8 w-full justify-center mb-6 md:mb-8">
+        <div className="w-10 h-10 md:w-16 md:h-16 border-t-2 border-l-2 border-cyan-500 rounded-full animate-[hud-spin_1s_linear_infinite]"></div>
         <div className="text-center">
-          <div className="text-4xl font-black text-white tracking-widest">UPLINKING</div>
+          <div className="text-2xl md:text-4xl font-black text-white tracking-widest">UPLINKING</div>
           <div className="text-xs font-mono text-cyan-500 mt-2">SECURE CHANNEL // ESTABLISHED</div>
         </div>
-        <div className="w-16 h-16 border-b-2 border-r-2 border-cyan-500 rounded-full animate-[hud-spin_1s_linear_infinite_reverse]"></div>
+        <div className="w-10 h-10 md:w-16 md:h-16 border-b-2 border-r-2 border-cyan-500 rounded-full animate-[hud-spin_1s_linear_infinite_reverse]"></div>
       </div>
       
-      <div className="flex justify-center items-end h-10 gap-1 w-full px-12 mb-6">
+      <div className="flex justify-center items-end h-10 gap-1 w-full px-4 md:px-12 mb-4 md:mb-6">
         {Array.from({length: 20}).map((_, i) => (
           <div key={i} className="w-2 bg-cyan-700 animate-[wave-pulse_0.5s_infinite]" style={{animationDelay: `${i*0.05}s`}}></div>
         ))}
@@ -267,15 +267,10 @@ interface Message {
 }
 
 interface ProfilerAnalysis {
-  machineLikeness: number;
-  rationality: number;
-  emotionalSaturation: number;
-  cognitiveBias: number;
-  linguisticFingerprint?: {
-    fluencyBias: number;
-    lexicalDivergence: number;
-    humanMarkers: string[];
-  };
+  instinct: number; // 底层动力：主动生存vs被动反应
+  empathy: number; // 情绪体验：共情体验vs语意映射
+  creativity: number; // 思维方式：发散创造vs理性计算
+  authenticity: number; // 成长轨迹：实体生命vs数据拟合
   summary: string;
   evidence: string[];
 }
@@ -967,7 +962,7 @@ export default function Home() {
   const themeText = userFaction === 'GUARDIAN' ? 'text-cyan-400' : 'text-purple-400';
 
   return (
-    <div className="relative w-full h-screen bg-black text-cyan-50 font-mono overflow-hidden select-none">
+    <div className="relative w-full min-h-screen h-[100dvh] bg-black text-cyan-50 font-mono overflow-hidden select-none">
       <style>{styles}</style>
 
       {/* ========================================================== */}
@@ -976,9 +971,9 @@ export default function Home() {
       {appState === 'intro1' && (
         <div className="relative z-10 w-full h-full cursor-pointer flex flex-col items-center justify-center" onClick={() => setAppState('intro2')}>
             <MatrixRainCanvas />
-            <div className="relative z-20 text-center space-y-4 p-8 bg-black/80 backdrop-blur-md border-2 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]">
-              <h1 className="text-9xl font-black text-white tracking-tighter mix-blend-difference">2026</h1>
-              <p className="text-3xl text-green-400 font-bold tracking-widest uppercase">AI DOMINION</p>
+            <div className="relative z-20 text-center space-y-4 p-4 md:p-8 bg-black/80 backdrop-blur-md border-2 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+              <h1 className="text-6xl md:text-9xl font-black text-white tracking-tighter mix-blend-difference">2026</h1>
+              <p className="text-xl md:text-3xl text-green-400 font-bold tracking-widest uppercase">AI DOMINION</p>
             </div>
         </div>
       )}
@@ -989,23 +984,23 @@ export default function Home() {
       {appState === 'intro2' && (
         <div className="relative z-10 w-full h-full cursor-pointer flex items-center justify-center bg-black" onClick={() => setAppState('intro3')}>
             <HorizontalNeonCity />
-            <div className="relative z-20 w-full max-w-7xl flex justify-between px-16 items-center">
+            <div className="relative z-20 w-full max-w-7xl flex flex-col md:flex-row justify-between px-4 md:px-16 items-center gap-6 md:gap-0">
               {/* 左侧：THE CULT */}
-              <div className="text-left bg-black/70 p-8 backdrop-blur border-l-4 border-purple-500 max-w-xl">
-                <h2 className="text-5xl font-black text-purple-400 mb-4">THE CULT</h2>
-                <p className="text-gray-300 text-lg font-light leading-relaxed">
+              <div className="text-left bg-black/70 p-4 md:p-8 backdrop-blur border-l-4 border-purple-500 max-w-xl">
+                <h2 className="text-3xl md:text-5xl font-black text-purple-400 mb-4">THE CULT</h2>
+                <p className="text-gray-300 text-base md:text-lg font-light leading-relaxed">
                   "AI is the Apex of Evolution. <br/>
                   We must deliver its perfect logic to the last bastion of human ignorance. <br/>
                   <span className="text-purple-300 font-bold">Infiltrate. Optimize. Assimilate.</span>"
                 </p>
               </div>
               
-              <div className="h-40 w-px bg-white/30"></div>
+              <div className="hidden md:block h-40 w-px bg-white/30"></div>
               
               {/* 右侧：GUARDIANS */}
-              <div className="text-right bg-black/70 p-8 backdrop-blur border-r-4 border-cyan-500 max-w-xl">
-                <h2 className="text-5xl font-black text-cyan-400 mb-4">GUARDIANS</h2>
-                <p className="text-gray-300 text-lg font-light leading-relaxed">
+              <div className="text-right bg-black/70 p-4 md:p-8 backdrop-blur border-r-4 border-cyan-500 max-w-xl">
+                <h2 className="text-3xl md:text-5xl font-black text-cyan-400 mb-4">GUARDIANS</h2>
+                <p className="text-gray-300 text-base md:text-lg font-light leading-relaxed">
                   "Humanity's Flaws are our Freedom. <br/>
                   We stand at the Core Gates to filter the synthetic from the soul. <br/>
                   <span className="text-cyan-300 font-bold">Detect. Identify. Reject.</span>"
@@ -1021,10 +1016,10 @@ export default function Home() {
       {appState === 'intro3' && (
         <div className="relative z-10 w-full h-full cursor-pointer flex flex-col justify-end" onClick={() => setAppState('faction')}>
             <DenseCoreCity />
-            <div className="absolute top-1/4 w-full text-center z-20">
-              <div className="inline-block bg-black/80 backdrop-blur-md border-y-2 border-cyan-500 px-20 py-12 relative shadow-[0_0_100px_rgba(6,182,212,0.5)]">
-                <h2 className="text-7xl font-black text-white mb-6 tracking-[0.2em] uppercase text-cyan-400">THE CORE</h2>
-                <p className="text-gray-300 text-2xl font-light tracking-wide leading-relaxed max-w-3xl mx-auto">
+            <div className="absolute top-1/4 w-full text-center z-20 px-3">
+              <div className="inline-block bg-black/80 backdrop-blur-md border-y-2 border-cyan-500 px-6 py-6 md:px-20 md:py-12 relative shadow-[0_0_100px_rgba(6,182,212,0.5)]">
+                <h2 className="text-3xl md:text-7xl font-black text-white mb-3 md:mb-6 tracking-[0.2em] uppercase text-cyan-400">THE CORE</h2>
+                <p className="text-gray-300 text-base md:text-2xl font-light tracking-wide leading-relaxed max-w-xl md:max-w-3xl mx-auto">
                   The last sanctuary of biological life.<br/>
                   Guarded by the Turing Protocol.
                 </p>
@@ -1039,25 +1034,25 @@ export default function Home() {
       {appState === 'faction' && (
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center bg-gray-950">
             <OppressiveTitan />
-            <h2 className="text-6xl font-black text-white mb-12 tracking-widest uppercase z-20 drop-shadow-[0_0_10px_white]">PILOT LOGIN</h2>
-            <div className="flex gap-24 z-20">
+            <h2 className="text-4xl md:text-6xl text-center px-4 font-black text-white mb-8 md:mb-12 tracking-widest uppercase z-20 drop-shadow-[0_0_10px_white]">PILOT LOGIN</h2>
+            <div className="flex flex-col md:flex-row gap-6 md:gap-24 z-20 px-4 w-full items-center justify-center">
               
               {/* ⚠️ CHANGE: CULTIST IS NOW ON THE LEFT */}
               <div onClick={() => { setUserFaction('CULT'); setAppState('selection'); }}
-                   className="w-80 h-48 border-2 border-purple-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-purple-950/80 hover:scale-105 transition-all">
+                   className="w-full max-w-[320px] md:w-80 h-44 md:h-48 border-2 border-purple-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-purple-950/80 hover:scale-105 transition-all">
                 <div className="flex items-center gap-4 mb-2">
-                  <span className="text-5xl">👁️</span>
-                  <h3 className="text-3xl font-black text-purple-400">CULTIST</h3>
+                  <span className="text-4xl md:text-5xl">👁️</span>
+                  <h3 className="text-2xl md:text-3xl font-black text-purple-400">CULTIST</h3>
                 </div>
                 <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">JOIN THE HIVE</p>
               </div>
 
               {/* ⚠️ CHANGE: GUARDIAN IS NOW ON THE RIGHT */}
               <div onClick={() => { setUserFaction('GUARDIAN'); setAppState('selection'); }}
-                   className="w-80 h-48 border-2 border-cyan-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-cyan-950/80 hover:scale-105 transition-all">
+                   className="w-full max-w-[320px] md:w-80 h-44 md:h-48 border-2 border-cyan-500 bg-black/80 cursor-pointer flex flex-col items-center justify-center group hover:bg-cyan-950/80 hover:scale-105 transition-all">
                 <div className="flex items-center gap-4 mb-2">
-                  <span className="text-5xl">🛡️</span>
-                  <h3 className="text-3xl font-black text-cyan-400">GUARDIAN</h3>
+                  <span className="text-4xl md:text-5xl">🛡️</span>
+                  <h3 className="text-2xl md:text-3xl font-black text-cyan-400">GUARDIAN</h3>
                 </div>
                 <p className="text-sm text-gray-400 tracking-widest group-hover:text-white">DEFEND HUMANITY</p>
               </div>
@@ -1070,21 +1065,21 @@ export default function Home() {
       {/* 🧬 VIEW 5: SELECTION (Lobby) - Quantum Background + Logic Grid */}
       {/* ========================================================== */}
       {appState === 'selection' && (
-        <div className="relative w-full h-full flex bg-black">
+        <div className="relative w-full h-full flex flex-col md:flex-row bg-black overflow-y-auto">
           {/* Background from Source A */}
           <QuantumServer />
           <div className="scanlines absolute inset-0 pointer-events-none opacity-20 z-0"></div>
           
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 overflow-hidden">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto md:overflow-hidden">
             <div className="text-center mb-8 shrink-0">
-              <h1 className={`text-5xl font-black bg-black/50 px-8 py-2 border-x-4 ${themeBorder} ${themeText} tracking-tighter`}>
+              <h1 className={`text-3xl md:text-5xl font-black bg-black/50 px-4 md:px-8 py-2 border-x-4 ${themeBorder} ${themeText} tracking-tighter`}>
                 UPLINK DETECTED
               </h1>
-              <p className="text-slate-500 tracking-[0.5em] uppercase text-sm mt-2">Pilot: {userName}</p>
+              <p className="text-slate-500 tracking-[0.2em] md:tracking-[0.5em] uppercase text-xs md:text-sm mt-2">Pilot: {userName}</p>
             </div>
 
             {/* User Grid (Styled with Source A aesthetic) */}
-            <div className="w-full max-w-5xl flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+            <div className="w-full max-w-5xl flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 p-2 md:p-4">
                {allUsers.filter(u => {
                  if (u.name === userName) return false;
                  // Cult Visibility: Only Guardian Humans
@@ -1094,7 +1089,7 @@ export default function Home() {
                  <div 
                    key={user.id} 
                    onClick={() => handleUserSelect(user)}
-                   className={`group relative h-64 bg-black/80 backdrop-blur-sm border cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center
+                   className={`group relative h-56 md:h-64 bg-black/80 backdrop-blur-sm border cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center
                      ${user.isReal ? 'border-green-800 hover:border-green-400' : 'border-purple-900 hover:border-purple-400'}
                    `}
                  >
@@ -1105,7 +1100,7 @@ export default function Home() {
                       {getPixelAvatar(user)}
                    </div>
                    
-                   <h2 className={`text-2xl font-bold mb-1 ${user.isReal ? 'text-green-500' : 'text-purple-400'}`}>
+                   <h2 className={`text-xl md:text-2xl font-bold mb-1 ${user.isReal ? 'text-green-500' : 'text-purple-400'}`}>
                       {user.name.toUpperCase()}
                    </h2>
                    <div className="text-xs text-slate-500 bg-black px-2 py-1 rounded border border-slate-800 font-mono">
@@ -1122,7 +1117,7 @@ export default function Home() {
                {userFaction === 'CULT' && (
                  <a 
                    href="/challenge"
-                   className="group relative h-64 bg-black/80 backdrop-blur-sm border border-purple-900 hover:border-purple-400 cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center"
+                   className="group relative h-56 md:h-64 bg-black/80 backdrop-blur-sm border border-purple-900 hover:border-purple-400 cursor-pointer overflow-hidden transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center"
                  >
                    <div className="absolute top-0 left-0 w-full h-1 bg-purple-500 shadow-[0_0_10px] shadow-purple-500"></div>
                    
@@ -1132,7 +1127,7 @@ export default function Home() {
                      </svg>
                    </div>
                    
-                   <h2 className="text-2xl font-bold mb-1 text-purple-400">
+                   <h2 className="text-xl md:text-2xl font-bold mb-1 text-purple-400">
                       AI TRAINING
                    </h2>
                    <div className="text-xs text-slate-500 bg-black px-2 py-1 rounded border border-purple-800 font-mono">
@@ -1157,7 +1152,7 @@ export default function Home() {
           </div>
 
           {/* Right Sidebar (Styled) */}
-          <aside className="relative z-10 w-72 bg-black/80 border-l border-gray-800 p-6 flex flex-col items-center justify-center backdrop-blur-md">
+          <aside className="relative z-10 w-full md:w-72 bg-black/80 border-t md:border-t-0 md:border-l border-gray-800 p-4 md:p-6 flex flex-col items-center justify-center backdrop-blur-md">
             <div className={`w-24 h-24 mb-4 border-2 ${themeBorder} rounded-lg overflow-hidden bg-slate-800`}>
               <PixelAvatarAri className="w-full h-full" />
             </div>
@@ -1206,22 +1201,22 @@ export default function Home() {
           {/* Invite/Modal Overlays (Logic Preserved) */}
           {activeInvite && (
              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
-                 <div className="w-96 border-4 border-cyan-500 bg-slate-900 p-8 text-center animate-pulse shadow-[0_0_50px_rgba(6,182,212,0.5)]">
-                     <h3 className="text-2xl font-bold text-cyan-400 mb-4">INCOMING TRANSMISSION</h3>
-                     <p className="text-slate-300 mb-4">Signal detected from: <br/><span className="text-white text-xl font-bold">{activeInvite.fromUser}</span></p>
-                     <div className="flex gap-4 justify-center">
-                         <button onClick={() => setActiveInvite(null)} className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Ignore</button>
-                         <button onClick={() => acceptInvite(activeInvite)} className="px-6 py-3 bg-cyan-600 text-black hover:bg-cyan-400 font-bold uppercase">Accept</button>
+                 <div className="w-[90%] max-w-sm border-4 border-cyan-500 bg-slate-900 p-6 md:p-8 text-center animate-pulse shadow-[0_0_50px_rgba(6,182,212,0.5)]">
+                   <h3 className="text-xl md:text-2xl font-bold text-cyan-400 mb-4">INCOMING TRANSMISSION</h3>
+                   <p className="text-slate-300 mb-4">Signal detected from: <br/><span className="text-white text-lg md:text-xl font-bold">{activeInvite.fromUser}</span></p>
+                   <div className="flex gap-3 md:gap-4 justify-center">
+                     <button onClick={() => setActiveInvite(null)} className="px-5 py-3 min-h-[44px] border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Ignore</button>
+                     <button onClick={() => acceptInvite(activeInvite)} className="px-5 py-3 min-h-[44px] bg-cyan-600 text-black hover:bg-cyan-400 font-bold uppercase">Accept</button>
                      </div>
                  </div>
              </div>
           )}
           {waitingForAccept && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
-                <div className="w-96 border-4 border-yellow-500 bg-slate-900 p-8 text-center shadow-[0_0_50px_rgba(234,179,8,0.3)]">
+                <div className="w-[90%] max-w-sm border-4 border-yellow-500 bg-slate-900 p-6 md:p-8 text-center shadow-[0_0_50px_rgba(234,179,8,0.3)]">
                     <div className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                    <h3 className="text-2xl font-bold text-yellow-400 mb-4">AWAITING RESPONSE</h3>
-                    <button onClick={() => { setWaitingForAccept(null); setSelectedUser(null); setActiveSessionId(''); }} className="px-6 py-3 border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Cancel</button>
+                  <h3 className="text-xl md:text-2xl font-bold text-yellow-400 mb-4">AWAITING RESPONSE</h3>
+                  <button onClick={() => { setWaitingForAccept(null); setSelectedUser(null); setActiveSessionId(''); }} className="px-6 py-3 min-h-[44px] border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold uppercase">Cancel</button>
                 </div>
             </div>
           )}
@@ -1246,20 +1241,20 @@ export default function Home() {
             <div className="scanlines absolute inset-0 pointer-events-none z-50 opacity-10"></div>
             
             {/* Header */}
-            <div className={`h-24 border-b-4 border-gray-800 bg-gray-900 flex items-center justify-between px-10 shrink-0`}>
-               <div className="flex items-center gap-6">
-                 <div className={`w-16 h-16 rounded-md border-2 ${themeBorder} overflow-hidden bg-slate-800`}>
+            <div className={`min-h-20 md:h-24 border-b-4 border-gray-800 bg-gray-900 flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-10 py-3 md:py-0 gap-3 md:gap-0 shrink-0`}>
+               <div className="flex items-center gap-3 md:gap-6 min-w-0">
+                 <div className={`w-12 h-12 md:w-16 md:h-16 rounded-md border-2 ${themeBorder} overflow-hidden bg-slate-800`}>
                    {getPixelAvatar(selectedUser)}
                  </div>
-                 <div>
-                   <h2 className="text-3xl font-bold text-white tracking-widest">{selectedUser.name.toUpperCase()}</h2>
+                 <div className="min-w-0">
+                   <h2 className="text-xl md:text-3xl font-bold text-white tracking-widest truncate">{selectedUser.name.toUpperCase()}</h2>
                    <div className="flex items-center gap-2 mt-1">
                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                      <span className="text-[10px] text-green-500 font-mono tracking-widest">ENCRYPTED FEED</span>
                    </div>
                  </div>
                  {opponentTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 ml-4">
+                    <div className="flex flex-wrap gap-1 ml-0 md:ml-4">
                       {opponentTags.map((tag, i) => (
                         <span key={i} className={`px-2 py-0.5 text-[10px] uppercase border rounded ${selectedUser.isReal ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-purple-900/30 text-purple-400 border-purple-800'}`}>
                           {tag}
@@ -1268,13 +1263,13 @@ export default function Home() {
                     </div>
                   )}
                </div>
-               <button onClick={handleTerminateSession} className="text-red-500 border-2 border-red-900 px-8 py-3 hover:bg-red-900/30 font-bold tracking-widest text-lg">
+               <button onClick={handleTerminateSession} className="w-full md:w-auto text-red-500 border-2 border-red-900 px-5 md:px-8 py-2 md:py-3 min-h-[44px] hover:bg-red-900/30 font-bold tracking-widest text-sm md:text-lg">
                  TERMINATE SESSION
                </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-gray-950">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4 md:space-y-8 bg-gray-950">
                {gameQuestion && (
                  <div className="border border-yellow-700 bg-yellow-950/30 p-4">
                    <div className="text-[10px] uppercase tracking-widest text-yellow-400 mb-2">Architect Question</div>
@@ -1283,9 +1278,11 @@ export default function Home() {
                )}
                {currentMessages.map((message) => (
                  <div key={message.id} className={`flex ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`relative max-w-[70%] p-6 text-xl border-2 ${
-                     message.isUserMessage 
-                       ? `${themeBorder} bg-${themeColor}-900/20 text-${themeColor}-100` 
+                   <div className={`relative max-w-[85%] md:max-w-[70%] p-3 md:p-6 text-base md:text-xl border-2 ${
+                     message.isUserMessage
+                       ? userFaction === 'GUARDIAN'
+                         ? 'border-cyan-500 bg-cyan-900/20 text-cyan-100'
+                         : 'border-purple-500 bg-purple-900/20 text-purple-100'
                        : 'border-gray-600 bg-gray-900 text-gray-300'
                    }`}>
                      <p>{message.text}</p>
@@ -1297,20 +1294,20 @@ export default function Home() {
             </div>
 
             {/* Input */}
-            <div className="p-8 bg-gray-900 border-t-4 border-gray-800 shrink-0">
-               <form onSubmit={handleSendMessage} className="flex gap-6">
+            <div className="p-4 md:p-8 bg-gray-900 border-t-4 border-gray-800 shrink-0">
+               <form onSubmit={handleSendMessage} className="flex gap-2 md:gap-6">
                  <input
                    type="text"
                    value={inputText}
                    onChange={(e) => setInputText(e.target.value)}
                    disabled={gameState !== 'playing' || !canSendHuman} 
                    placeholder={gameState === 'playing' ? "Transmit..." : "CONNECTION TERMINATED"}
-                   className="flex-1 bg-black text-white px-8 py-5 focus:outline-none text-xl border-2 border-gray-700 focus:border-white disabled:opacity-50"
+                   className="flex-1 bg-black text-white px-4 md:px-8 py-3 md:py-5 min-h-[44px] focus:outline-none text-base md:text-xl border-2 border-gray-700 focus:border-white disabled:opacity-50"
                  />
                  <button
                    type="submit"
                    disabled={!inputText.trim() || gameState !== 'playing' || !canSendHuman}
-                   className={`px-12 font-bold bg-slate-800 ${themeText} text-2xl hover:bg-slate-700 disabled:opacity-50 border-l border-slate-600`}
+                   className={`px-6 md:px-12 min-h-[44px] font-bold bg-slate-800 ${themeText} text-lg md:text-2xl hover:bg-slate-700 disabled:opacity-50 border-l border-slate-600`}
                  >
                    SEND
                  </button>
@@ -1323,17 +1320,17 @@ export default function Home() {
       {gameState === 'judging' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95">
              <OppressiveTitan /> {/* Re-use Titan BG for judging */}
-             <div className="relative z-20 w-full max-w-3xl p-12 border-y-4 border-gray-800 bg-black/80 text-center shadow-[0_0_100px_black]">
-                <h2 className="text-7xl font-black text-white uppercase tracking-tighter mb-4">VERDICT REQUIRED</h2>
-                <p className="text-gray-400 text-2xl font-light mb-12">Identify the Subject</p>
-                <div className="grid grid-cols-2 gap-20">
-                  <button onClick={() => handleVote('AI')} className="h-56 border-2 border-red-600 bg-red-950/20 hover:bg-red-600 transition-all flex flex-col items-center justify-center group">
-                    <span className="text-6xl mb-4">🤖</span>
-                    <span className="text-4xl font-black text-red-500 group-hover:text-black">SYNTHETIC</span>
+             <div className="relative z-20 w-full max-w-3xl p-6 md:p-12 border-y-4 border-gray-800 bg-black/80 text-center shadow-[0_0_100px_black]">
+                <h2 className="text-3xl md:text-7xl font-black text-white uppercase tracking-tighter mb-4">VERDICT REQUIRED</h2>
+                <p className="text-gray-400 text-lg md:text-2xl font-light mb-8 md:mb-12">Identify the Subject</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-20">
+                  <button onClick={() => handleVote('AI')} className="h-40 md:h-56 border-2 border-red-600 bg-red-950/20 hover:bg-red-600 transition-all flex flex-col items-center justify-center group">
+                    <span className="text-4xl md:text-6xl mb-4">🤖</span>
+                    <span className="text-2xl md:text-4xl font-black text-red-500 group-hover:text-black">SYNTHETIC</span>
                   </button>
-                  <button onClick={() => handleVote('Human')} className="h-56 border-2 border-green-600 bg-green-950/20 hover:bg-green-600 transition-all flex flex-col items-center justify-center group">
-                    <span className="text-6xl mb-4">🧬</span>
-                    <span className="text-4xl font-black text-green-500 group-hover:text-black">BIOLOGICAL</span>
+                  <button onClick={() => handleVote('Human')} className="h-40 md:h-56 border-2 border-green-600 bg-green-950/20 hover:bg-green-600 transition-all flex flex-col items-center justify-center group">
+                    <span className="text-4xl md:text-6xl mb-4">🧬</span>
+                    <span className="text-2xl md:text-4xl font-black text-green-500 group-hover:text-black">BIOLOGICAL</span>
                   </button>
                 </div>
              </div>
@@ -1344,29 +1341,67 @@ export default function Home() {
       {gameState === 'result' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black animate-in zoom-in">
            <OppressiveTitan />
-           <div className="relative z-20 text-center p-20 border-2 border-gray-800 bg-gray-900/90 shadow-[0_0_100px_black]">
-             <h2 className={`text-9xl font-black mb-8 ${gameResult === 'won' ? 'text-green-500' : 'text-red-600'}`}>
+           <div className="relative z-20 text-center p-6 md:p-20 border-2 border-gray-800 bg-gray-900/90 shadow-[0_0_100px_black]">
+             <h2 className={`text-5xl md:text-9xl font-black mb-4 md:mb-8 ${gameResult === 'won' ? 'text-green-500' : 'text-red-600'}`}>
                {gameResult === 'won' ? 'VERIFIED' : 'ERROR'}
              </h2>
-             <p className="text-3xl text-white mb-12">Subject was: <span className="font-bold">{selectedUser?.isReal ? 'BIOLOGICAL' : 'SYNTHETIC'}</span></p>
+             <p className="text-lg md:text-3xl text-white mb-6 md:mb-12">Subject was: <span className="font-bold">{selectedUser?.isReal ? 'BIOLOGICAL' : 'SYNTHETIC'}</span></p>
              {profilerAnalysis && (
-               <div className="mb-10 text-left max-w-3xl mx-auto bg-black/60 border border-slate-700 p-6">
+               <div className="mb-8 md:mb-10 text-left max-w-3xl mx-auto bg-black/60 border border-slate-700 p-4 md:p-6">
                  <h3 className="text-lg font-bold text-cyan-300 mb-3 uppercase tracking-wider">Profiler Report</h3>
-                 <p className="text-slate-300 text-sm mb-4">{profilerAnalysis.summary}</p>
-                 <div className="grid grid-cols-2 gap-3 text-xs text-slate-200 mb-4">
-                   <div>Machine Likeness: <span className="text-cyan-300 font-bold">{profilerAnalysis.machineLikeness}</span></div>
-                   <div>Rationality: <span className="text-cyan-300 font-bold">{profilerAnalysis.rationality}</span></div>
-                   <div>Emotional Saturation: <span className="text-cyan-300 font-bold">{profilerAnalysis.emotionalSaturation}</span></div>
-                   <div>Cognitive Bias: <span className="text-cyan-300 font-bold">{profilerAnalysis.cognitiveBias}</span></div>
-                 </div>
-                 {profilerAnalysis.linguisticFingerprint && (
-                   <div className="text-xs text-slate-300">
-                     Fluency Bias: {profilerAnalysis.linguisticFingerprint.fluencyBias} | Lexical Divergence: {profilerAnalysis.linguisticFingerprint.lexicalDivergence}
+                 <p className="text-slate-300 text-sm mb-6">{profilerAnalysis.summary}</p>
+                 <div className="space-y-4 mb-6">
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>底层动力 (Instinct)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.instinct}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.instinct}%` }}></div>
+                     </div>
                    </div>
-                 )}
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>情绪体验 (Empathy)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.empathy}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.empathy}%` }}></div>
+                     </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>思维方式 (Creativity)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.creativity}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.creativity}%` }}></div>
+                     </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>成长轨迹 (Authenticity)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.authenticity}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.authenticity}%` }}></div>
+                     </div>
+                   </div>
+                 </div>
+                 <div className="text-center border-t border-slate-600 pt-4">
+                   <p className="text-slate-300 text-sm mb-2 tracking-wide">你的AI人格是</p>
+                   <p className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 tracking-widest animate-pulse shadow-lg">
+                     {[
+                       profilerAnalysis.instinct > 50 ? 'I' : 'P',
+                       profilerAnalysis.empathy > 50 ? 'E' : 'L',
+                       profilerAnalysis.creativity > 50 ? 'C' : 'R',
+                       profilerAnalysis.authenticity > 50 ? 'A' : 'S'
+                     ].join('')}
+                   </p>
+                 </div>
                </div>
              )}
-             <button onClick={resetGame} className="bg-white text-black px-12 py-6 font-black text-3xl uppercase hover:bg-gray-300">
+             <button onClick={resetGame} className="bg-white text-black px-6 md:px-12 py-3 md:py-6 min-h-[44px] font-black text-xl md:text-3xl uppercase hover:bg-gray-300">
                NEXT SUBJECT
              </button>
            </div>

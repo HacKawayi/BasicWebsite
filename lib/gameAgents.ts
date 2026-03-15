@@ -5,15 +5,10 @@ import {
 } from '@/lib/aiProviders';
 
 export interface ProfilerAnalysis {
-  machineLikeness: number;
-  rationality: number;
-  emotionalSaturation: number;
-  cognitiveBias: number;
-  linguisticFingerprint: {
-    fluencyBias: number;
-    lexicalDivergence: number;
-    humanMarkers: string[];
-  };
+  instinct: number; // 底层动力：主动生存vs被动反应 (0-100, higher = more instinct/active)
+  empathy: number; // 情绪体验：共情体验vs语意映射 (0-100, higher = more empathy)
+  creativity: number; // 思维方式：发散创造vs理性计算 (0-100, higher = more creativity)
+  authenticity: number; // 成长轨迹：实体生命vs数据拟合 (0-100, higher = more authentic/real)
   summary: string;
   evidence: string[];
 }
@@ -106,34 +101,34 @@ function heuristicProfiler(playerMessages: string[]): ProfilerAnalysis {
   const punct = (text.match(/[!?.,]/g) || []).length;
   const hedge = (text.match(/\b(um|uh|maybe|kind of|sort of|hmm|I think)\b/gi) || []).length;
   const emotion = (text.match(/\b(love|hate|fear|sorry|happy|sad|angry|care)\b/gi) || []).length;
+  const personal = (text.match(/\b(I|me|my|mine|we|us|our)\b/gi) || []).length;
+  const creative = (text.match(/\b(imagine|dream|wonder|create|invent|feel|experience)\b/gi) || []).length;
 
-  const fluencyBias = clampScore(70 - hedge * 12 + Math.max(0, 30 - punct));
-  const lexicalDivergence = clampScore(40 + Math.min(40, Math.floor(len / 30)) + hedge * 6);
-  const emotionalSaturation = clampScore(20 + emotion * 15 + hedge * 5);
-  const rationality = clampScore(55 + Math.max(0, punct - 5) * 3 - hedge * 4);
-  const cognitiveBias = clampScore(50 + hedge * 10 - Math.max(0, punct - 8) * 2);
-  const machineLikeness = clampScore((fluencyBias + rationality - emotionalSaturation) / 2 + 25);
+  // Instinct: Active vs passive - based on message length and personal pronouns (active engagement)
+  const instinct = clampScore(30 + personal * 8 + Math.min(40, len / 20));
+
+  // Empathy: Emotional connection vs semantic - based on emotion words and hedging (shows care/uncertainty)
+  const empathy = clampScore(20 + emotion * 12 + hedge * 6);
+
+  // Creativity: Divergent vs rational - based on creative words and low punctuation (non-linear)
+  const creativity = clampScore(25 + creative * 10 - Math.max(0, punct - 3) * 5);
+
+  // Authenticity: Real experience vs simulation - based on personal stories and emotion
+  const authenticity = clampScore(35 + personal * 6 + emotion * 8 + hedge * 4);
 
   return {
-    machineLikeness,
-    rationality,
-    emotionalSaturation,
-    cognitiveBias,
-    linguisticFingerprint: {
-      fluencyBias,
-      lexicalDivergence,
-      humanMarkers: [
-        hedge > 0 ? 'Hedging language present' : 'Low hedging language',
-        emotion > 0 ? 'Emotion words present' : 'Emotion words sparse',
-      ],
-    },
+    instinct,
+    empathy,
+    creativity,
+    authenticity,
     summary:
-      machineLikeness >= 60
-        ? 'Wording appears highly structured and machine-like.'
-        : 'Wording shows human-like uncertainty or emotion patterns.',
+      instinct >= 50 && empathy >= 50 && creativity >= 50 && authenticity >= 50
+        ? 'Responses show strong human characteristics across all dimensions.'
+        : 'Responses appear more structured or less human-like in some aspects.',
     evidence: [
       `Analyzed ${playerMessages.length} player message(s).`,
       `Total character count: ${len}.`,
+      `Personal pronouns: ${personal}, Emotion words: ${emotion}, Creative words: ${creative}`,
     ],
   };
 }
@@ -215,19 +210,20 @@ export async function runProfilerAnalysis(params: {
       'Player messages:',
       compactMessages.map((m, i) => `${i + 1}. ${m}`).join('\n'),
       '',
+      'Analyze the player\'s messages for four key human characteristics:',
+      '1. 底层动力 (Instinct): Active production vs passive reaction - Does the player proactively generate content and drive conversation, or just respond to inputs?',
+      '2. 情绪体验 (Empathy): Emotional empathy vs semantic mapping - Does the player show genuine emotional connection and empathy, or just logical semantic understanding?',
+      '3. 思维方式 (Creativity): Divergent creativity vs rational calculation - Is the thinking non-linear, creative, and discontinuous, or strictly logical and calculated?',
+      '4. 成长轨迹 (Authenticity): Real life experience vs data simulation - Do responses reflect authentic lived experiences, or statistical data fitting?',
+      '',
       'Return strict JSON only with this shape:',
       '{',
-      '  "machineLikeness": 0-100,',
-      '  "rationality": 0-100,',
-      '  "emotionalSaturation": 0-100,',
-      '  "cognitiveBias": 0-100,',
-      '  "linguisticFingerprint": {',
-      '    "fluencyBias": 0-100,',
-      '    "lexicalDivergence": 0-100,',
-      '    "humanMarkers": ["..."]',
-      '  },',
-      '  "summary": "short summary",',
-      '  "evidence": ["..."]',
+      '  "instinct": 0-100,',
+      '  "empathy": 0-100,',
+      '  "creativity": 0-100,',
+      '  "authenticity": 0-100,',
+      '  "summary": "short summary of analysis",',
+      '  "evidence": ["evidence point 1", "evidence point 2", ...]',
       '}',
     ].join('\n');
 
@@ -249,15 +245,10 @@ export async function runProfilerAnalysis(params: {
     }
 
     const analysis: ProfilerAnalysis = {
-      machineLikeness: clampScore(parsed.machineLikeness),
-      rationality: clampScore(parsed.rationality),
-      emotionalSaturation: clampScore(parsed.emotionalSaturation),
-      cognitiveBias: clampScore(parsed.cognitiveBias),
-      linguisticFingerprint: {
-        fluencyBias: clampScore(parsed.linguisticFingerprint?.fluencyBias),
-        lexicalDivergence: clampScore(parsed.linguisticFingerprint?.lexicalDivergence),
-        humanMarkers: normalizeStringArray(parsed.linguisticFingerprint?.humanMarkers),
-      },
+      instinct: clampScore(parsed.instinct),
+      empathy: clampScore(parsed.empathy),
+      creativity: clampScore(parsed.creativity),
+      authenticity: clampScore(parsed.authenticity),
       summary:
         typeof parsed.summary === 'string' && parsed.summary.trim().length > 0
           ? parsed.summary.trim()

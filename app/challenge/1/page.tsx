@@ -101,7 +101,7 @@ export default function KnapsackLevel() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-purple-50 font-mono">
+    <div className="flex min-h-screen h-[100dvh] flex-col md:flex-row bg-black text-purple-50 font-mono">
       <style>{styles}</style>
       
       {/* Background Effects */}
@@ -113,7 +113,7 @@ export default function KnapsackLevel() {
       </div>
       <div className="scanlines absolute inset-0 z-10 pointer-events-none opacity-20"></div>
 
-      <div className="relative z-20 flex-1 p-8 flex flex-col h-full overflow-hidden">
+      <div className="relative z-20 flex-1 p-4 md:p-8 flex flex-col h-full overflow-hidden">
         {/* Navigation */}
         <Link href="/challenge" className="text-purple-400 hover:text-purple-300 text-sm uppercase tracking-widest mb-4 inline-flex items-center gap-2">
           <span>←</span> ABORT PROTOCOL
@@ -124,7 +124,7 @@ export default function KnapsackLevel() {
           <div className="inline-block border border-green-500/30 bg-green-950/20 px-3 py-1 text-xs tracking-[0.2em] text-green-400 mb-2">
             PROTOCOL v1 // VIRAL_PACKING
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">PAYLOAD OPTIMIZATION</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-white mb-2">PAYLOAD OPTIMIZATION</h1>
           <p className="text-slate-400 text-sm">Select optimal virus modules. Maximize corruption without triggering bandwidth alarm.</p>
         </div>
 
@@ -168,7 +168,7 @@ export default function KnapsackLevel() {
         {/* Feedback / Status Panel */}
         <div className="bg-slate-900/80 backdrop-blur border border-purple-900/50 p-6 shrink-0">
            {/* Progress Bars */}
-           <div className="grid grid-cols-2 gap-8 mb-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4">
              {/* Bandwidth Bar */}
              <div>
                <div className="flex justify-between text-xs mb-1">
@@ -231,7 +231,7 @@ export default function KnapsackLevel() {
       </div>
 
       {/* Sidebar */}
-      <aside className="relative z-20 w-72 bg-black/80 border-l border-purple-900/50 p-6 backdrop-blur-md flex flex-col">
+      <aside className="relative z-20 w-full md:w-72 bg-black/80 border-t md:border-t-0 md:border-l border-purple-900/50 p-4 md:p-6 backdrop-blur-md flex flex-col">
         <h3 className="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3 border-b border-purple-900/50 pb-2">MISSION PARAMETERS</h3>
         <p className="text-slate-400 text-xs mb-4 leading-relaxed">
           Guardian firewalls reject packets exceeding {MAX_BANDWIDTH}TB. You must verify which combination of modules yields the highest corruption rating within this limit.

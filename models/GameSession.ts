@@ -8,15 +8,10 @@ export interface IMessage {
 }
 
 export interface IProfilerAnalysis {
-  machineLikeness: number;
-  rationality: number;
-  emotionalSaturation: number;
-  cognitiveBias: number;
-  linguisticFingerprint: {
-    fluencyBias: number;
-    lexicalDivergence: number;
-    humanMarkers: string[];
-  };
+  instinct: number; // 底层动力：主动生存vs被动反应
+  empathy: number; // 情绪体验：共情体验vs语意映射
+  creativity: number; // 思维方式：发散创造vs理性计算
+  authenticity: number; // 成长轨迹：实体生命vs数据拟合
   summary: string;
   evidence: string[];
 }
