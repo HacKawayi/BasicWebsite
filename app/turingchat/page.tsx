@@ -1347,12 +1347,55 @@ export default function Home() {
              {profilerAnalysis && (
                <div className="mb-10 text-left max-w-3xl mx-auto bg-black/60 border border-slate-700 p-6">
                  <h3 className="text-lg font-bold text-cyan-300 mb-3 uppercase tracking-wider">Profiler Report</h3>
-                 <p className="text-slate-300 text-sm mb-4">{profilerAnalysis.summary}</p>
-                 <div className="grid grid-cols-2 gap-3 text-xs text-slate-200 mb-4">
-                   <div>底层动力 (Instinct): <span className="text-cyan-300 font-bold">{profilerAnalysis.instinct}</span></div>
-                   <div>情绪体验 (Empathy): <span className="text-cyan-300 font-bold">{profilerAnalysis.empathy}</span></div>
-                   <div>思维方式 (Creativity): <span className="text-cyan-300 font-bold">{profilerAnalysis.creativity}</span></div>
-                   <div>成长轨迹 (Authenticity): <span className="text-cyan-300 font-bold">{profilerAnalysis.authenticity}</span></div>
+                 <p className="text-slate-300 text-sm mb-6">{profilerAnalysis.summary}</p>
+                 <div className="space-y-4 mb-6">
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>底层动力 (Instinct)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.instinct}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.instinct}%` }}></div>
+                     </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>情绪体验 (Empathy)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.empathy}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.empathy}%` }}></div>
+                     </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>思维方式 (Creativity)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.creativity}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.creativity}%` }}></div>
+                     </div>
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-xs text-slate-200 mb-1">
+                       <span>成长轨迹 (Authenticity)</span>
+                       <span className="text-cyan-300 font-bold">{profilerAnalysis.authenticity}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                       <div className="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style={{ width: `${profilerAnalysis.authenticity}%` }}></div>
+                     </div>
+                   </div>
+                 </div>
+                 <div className="text-center border-t border-slate-600 pt-4">
+                   <p className="text-slate-300 text-sm mb-2 tracking-wide">你的AI人格是</p>
+                   <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 tracking-widest animate-pulse shadow-lg">
+                     {[
+                       profilerAnalysis.instinct > 50 ? 'I' : 'P',
+                       profilerAnalysis.empathy > 50 ? 'E' : 'L',
+                       profilerAnalysis.creativity > 50 ? 'C' : 'R',
+                       profilerAnalysis.authenticity > 50 ? 'A' : 'S'
+                     ].join('')}
+                   </p>
                  </div>
                </div>
              )}
