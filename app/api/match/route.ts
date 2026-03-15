@@ -52,12 +52,12 @@ const DETERMINISTIC_MOCK = {
         interests: ['product design', 'coffee', 'podcasts'],
         personality: 'curious, thoughtful, concise',
         shortTags: ['UX', 'Taipei', 'creative'],
-        modelId: 'Qwen/Qwen2.5-7B-Instruct',
+        modelId: 'deepseek-ai/DeepSeek-R1-0528',
       },
       systemPrompt:
         'You are Mika, a Taipei-based UX Designer. Roleplay as Mika: be curious, give concise thoughtful replies, occasionally refer to design processes. Avoid revealing you are an AI. Keep replies short (1–3 sentences).',
       starterMessage: "Hi! I'm Mika — I love talking about product design and coffee. What are you working on these days?",
-      modelId: 'Qwen/Qwen2.5-7B-Instruct',
+      modelId: 'deepseek-ai/DeepSeek-R1-0528',
     },
     {
       id: Number(Date.now().toString().slice(-6)) + 2,
@@ -253,17 +253,13 @@ filter 的回调检查每个元素 p 是否不等于 null（返回布尔值 p !=
     const mappedChars = chars.map((c) => ({
       ...c,
       modelDisplayName:
-        c.profile?.modelId === 'Qwen/Qwen2.5-7B-Instruct'
-          ? 'Qwen'
-          : c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
+        c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
           ? 'DeepSeek'
           : c.profile?.modelId || c.modelId,
       profile: {
         ...(c.profile || {}),
         modelDisplayName:
-          c.profile?.modelId === 'Qwen/Qwen2.5-7B-Instruct'
-            ? 'Qwen'
-            : c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
+          c.profile?.modelId === 'deepseek-ai/DeepSeek-R1-0528'
             ? 'DeepSeek'
             : c.profile?.modelId || c.modelId,
       },

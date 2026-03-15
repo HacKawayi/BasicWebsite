@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Pusher from 'pusher';
+import dbConnect from '@/lib/db';
+import GameSession from '@/models/GameSession';
 
 // Initialize Pusher for server-side
 const pusher = new Pusher({
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Pusher not configured' }, { status: 500 });
     }
 
-    const { action, sessionId, sender, content, role, fromUser, targetUser, tags } = await req.json();
+    const { action, sessionId, sender, content, role, fromUser, targetUser, tags, round } = await req.json();
 
     if (action === 'invite' || action === 'accept') {
       if (!fromUser || !targetUser || !sessionId) {
@@ -58,6 +60,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === 'question') {
+      if (!sessionId || !content) {
+        return NextResponse.json({ error: 'Missing question fields' }, { status: 400 });
+      }
+
+      const payload = {
+        sessionId,
+        question: content,
+        round: typeof round === 'number' ? round : undefined,
+        timestamp: Date.now(),
+      };
+
+      console.log('📡 Triggering round question on channel:', `private-session-${sessionId}`, payload);
+      const triggerResult = await pusher.trigger(`private-session-${sessionId}`, 'round-question', payload);
+      console.log('📡 Round question trigger result:', triggerResult);
+      return NextResponse.json({ success: true });
+    }
+
     if (!sessionId || !content) {
       return NextResponse.json({ error: 'Missing sessionId or content' }, { status: 400 });
     }
@@ -66,6 +86,35 @@ export async function POST(req: NextRequest) {
     // 使用 private channel 以增加安全性 (格式: private-session-ID)
     const timestamp = new Date();
     const roleToSend = role || 'user';
+
+    // Persist human chat messages for post-game profiling.
+    if (process.env.MONGODB_URI) {
+      try {
+        await dbConnect();
+        await GameSession.findOneAndUpdate(
+          { sessionId },
+          {
+            $setOnInsert: {
+              sessionId,
+              startTime: new Date(),
+              actualOpponent: 'HUMAN',
+            },
+            $push: {
+              messages: {
+                role: roleToSend === 'assistant' ? 'assistant' : 'user',
+                content,
+                sender: sender || 'unknown',
+                timestamp,
+              },
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (err) {
+        console.warn('[Talk] Failed to persist message:', err);
+      }
+    }
+
     console.log('📡 Triggering Pusher event on channel:', `private-session-${sessionId}`, 'with data:', { sender, content, role: roleToSend, timestamp });
     const triggerResult = await pusher.trigger(`private-session-${sessionId}`, 'new-message', {
       sender,

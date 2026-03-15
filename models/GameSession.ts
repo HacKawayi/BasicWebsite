@@ -4,12 +4,31 @@ export interface IMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  sender?: string;
+}
+
+export interface IProfilerAnalysis {
+  machineLikeness: number;
+  rationality: number;
+  emotionalSaturation: number;
+  cognitiveBias: number;
+  linguisticFingerprint: {
+    fluencyBias: number;
+    lexicalDivergence: number;
+    humanMarkers: string[];
+  };
+  summary: string;
+  evidence: string[];
 }
 
 export interface IGameSession extends Document {
   sessionId: string;
   startTime: Date;
   messages: IMessage[];
+  roundQuestion?: string;
+  architectModelId?: string;
+  profilerModelId?: string;
+  profilerAnalysis?: IProfilerAnalysis;
   playerGuess?: 'AI' | 'HUMAN';
   actualOpponent: 'AI' | 'HUMAN';
   isCorrect?: boolean;
@@ -34,6 +53,10 @@ const MessageSchema = new Schema<IMessage>({
     required: true,
     default: Date.now,
   },
+  sender: {
+    type: String,
+    required: false,
+  },
 });
 
 const GameSessionSchema = new Schema<IGameSession>(
@@ -52,6 +75,22 @@ const GameSessionSchema = new Schema<IGameSession>(
     messages: {
       type: [MessageSchema],
       default: [],
+    },
+    roundQuestion: {
+      type: String,
+      required: false,
+    },
+    architectModelId: {
+      type: String,
+      required: false,
+    },
+    profilerModelId: {
+      type: String,
+      required: false,
+    },
+    profilerAnalysis: {
+      type: Schema.Types.Mixed,
+      required: false,
     },
     playerGuess: {
       type: String,

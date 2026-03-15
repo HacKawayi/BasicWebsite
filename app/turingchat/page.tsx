@@ -266,6 +266,20 @@ interface Message {
   timestamp: Date;
 }
 
+interface ProfilerAnalysis {
+  machineLikeness: number;
+  rationality: number;
+  emotionalSaturation: number;
+  cognitiveBias: number;
+  linguisticFingerprint?: {
+    fluencyBias: number;
+    lexicalDivergence: number;
+    humanMarkers: string[];
+  };
+  summary: string;
+  evidence: string[];
+}
+
 interface Invite {
   fromUser: string;
   targetUser: string;
@@ -307,6 +321,12 @@ export default function Home() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
+  const [gameQuestion, setGameQuestion] = useState('');
+  const [profilerAnalysis, setProfilerAnalysis] = useState<ProfilerAnalysis | null>(null);
+  const [roundNumber, setRoundNumber] = useState(1);
+  const [localAnsweredRound, setLocalAnsweredRound] = useState(false);
+  const [remoteAnsweredRound, setRemoteAnsweredRound] = useState(false);
+  const [isAdvancingRound, setIsAdvancingRound] = useState(false);
   
   // --- Invites & Tags ---
   const [activeInvite, setActiveInvite] = useState<Invite | null>(null);
@@ -322,6 +342,7 @@ export default function Home() {
   const allUsersRef = useRef<User[]>(allUsers);
   const aiHandshakeTimerRef = useRef<number | null>(null);
   const hasSignaledJudgingRef = useRef(false);
+  const roundTransitionRef = useRef(false);
   const MESSAGE_THRESHOLD = 5;
 
   useEffect(() => { allUsersRef.current = allUsers; }, [allUsers]);
@@ -330,6 +351,56 @@ export default function Home() {
       if (aiHandshakeTimerRef.current) window.clearTimeout(aiHandshakeTimerRef.current);
     };
   }, []);
+
+  const initializeGameAgents = async (sessionId: string, forceNewQuestion = false) => {
+    try {
+      const opponentType = selectedUser?.isReal ? 'HUMAN' : 'AI';
+      const res = await fetch('/api/game/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          opponentType,
+          forceNewQuestion,
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data.question === 'string') {
+        setGameQuestion(data.question);
+        setLocalAnsweredRound(false);
+        setRemoteAnsweredRound(false);
+      }
+    } catch (e) {
+      console.error('[GameInit] Failed to initialize agents:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeSessionId) return;
+    initializeGameAgents(activeSessionId);
+  }, [activeSessionId, selectedUser]);
+
+  const requestNextRoundQuestion = async (sessionId: string): Promise<string | null> => {
+    try {
+      const opponentType = selectedUser?.isReal ? 'HUMAN' : 'AI';
+      const res = await fetch('/api/game/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          opponentType,
+          forceNewQuestion: true,
+        }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data.question === 'string' ? data.question : null;
+    } catch (error) {
+      console.error('[Round] Failed to request next question:', error);
+      return null;
+    }
+  };
 
   // ---------------------------------------------------------
   // 🎬 REVISED INTRO SEQUENCER (Source A Flow)
@@ -380,6 +451,65 @@ export default function Home() {
       }
     }
   }, [conversations, selectedUser, gameState, appState, activeSessionId]);
+
+  useEffect(() => {
+    if (!activeSessionId || !selectedUser || gameState !== 'playing') return;
+    if (!localAnsweredRound || !remoteAnsweredRound) return;
+    if (roundTransitionRef.current || isAdvancingRound) return;
+
+    const advanceRound = async () => {
+      roundTransitionRef.current = true;
+      setIsAdvancingRound(true);
+      const nextRound = roundNumber + 1;
+
+      try {
+        if (selectedUser.isReal) {
+          const isHost = userName.localeCompare(selectedUser.name) < 0;
+          if (isHost) {
+            const nextQuestion = await requestNextRoundQuestion(activeSessionId);
+            if (nextQuestion) {
+              setGameQuestion(nextQuestion);
+              setRoundNumber(nextRound);
+              await fetch('/api/talk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'question',
+                  sessionId: activeSessionId,
+                  content: nextQuestion,
+                  round: nextRound,
+                }),
+              });
+            }
+          }
+        } else {
+          const nextQuestion = await requestNextRoundQuestion(activeSessionId);
+          if (nextQuestion) {
+            setGameQuestion(nextQuestion);
+            setRoundNumber(nextRound);
+          }
+        }
+      } catch (error) {
+        console.error('[Round] Failed to advance round:', error);
+      } finally {
+        setLocalAnsweredRound(false);
+        setRemoteAnsweredRound(false);
+        setIsAdvancingRound(false);
+        roundTransitionRef.current = false;
+      }
+    };
+
+    advanceRound();
+  }, [
+    activeSessionId,
+    selectedUser,
+    gameState,
+    localAnsweredRound,
+    remoteAnsweredRound,
+    roundNumber,
+    isAdvancingRound,
+    userName,
+  ]);
 
   // Logic 2: Delay timer for analysis
   useEffect(() => {
@@ -521,7 +651,7 @@ export default function Home() {
           setSelectedUser(targetUser);
           setAppState('chat'); // Go to chat
           setGameState('playing');
-          setConversations(prev => ({ ...prev, [targetUser.id]: prev[targetUser.id] || [] }));
+          setConversations(prev => ({ ...prev, [targetUser.id]: [] }));
         }
       }
     });
@@ -547,12 +677,28 @@ export default function Home() {
                 timestamp: new Date(data.timestamp),
             };
             const senderUser = allUsersRef.current.find(u => u.name === data.sender);
-            const userId = senderUser ? senderUser.id : 'unknown';
+            const userId =
+              selectedUser && selectedUser.name === data.sender
+                ? selectedUser.id
+                : senderUser
+                ? senderUser.id
+                : selectedUser?.id || 'unknown';
             setConversations(prev => ({
                 ...prev,
                 [userId]: [...(prev[userId] || []), incomingMsg],
             }));
+            if (selectedUser && userId === selectedUser.id) {
+              setRemoteAnsweredRound(true);
+            }
         }
+    });
+    sessionChannel.bind('round-question', (data: any) => {
+      if (typeof data?.question === 'string' && data.question.trim().length > 0) {
+        setGameQuestion(data.question);
+        setRoundNumber(typeof data?.round === 'number' ? data.round : (prev) => prev + 1);
+        setLocalAnsweredRound(false);
+        setRemoteAnsweredRound(false);
+      }
     });
     sessionChannel.bind('phase-change', (data: any) => {
       if (data?.phase === 'judging') {
@@ -567,7 +713,7 @@ export default function Home() {
         sessionChannel.unbind_all();
         pusherRef.current?.unsubscribe(`private-session-${activeSessionId}`);
     };
-  }, [activeSessionId, userName, userFaction]);
+  }, [activeSessionId, userName, userFaction, selectedUser]);
 
   // ---------------------------------------------------------
   // 🕹️ MODIFIED HANDLERS (Connect Visuals to Logic)
@@ -618,6 +764,10 @@ export default function Home() {
   const startAISession = async (user: User) => {
       setAppState('chat');
       setGameState('playing');
+      setRoundNumber(1);
+      setLocalAnsweredRound(false);
+      setRemoteAnsweredRound(false);
+      setProfilerAnalysis(null);
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
       setActiveSessionId(newSessionId);
 
@@ -649,6 +799,7 @@ export default function Home() {
     const newMessage: Message = { id: Date.now(), sender: userName, text: userText, isUserMessage: true, timestamp: new Date() };
 
     setConversations(prev => ({ ...prev, [currentUserId]: [...(prev[currentUserId] || []), newMessage] }));
+    setLocalAnsweredRound(true);
     setInputText('');
 
     const isAIChat = selectedUser.isReal === false;
@@ -656,15 +807,17 @@ export default function Home() {
 
     try {
         if (isAIChat) {
-            const modelId = (selectedUser as any)?.profile?.modelId || 'deepseek-chat';
+            const modelId = (selectedUser as any)?.profile?.modelId || 'deepseek-ai/DeepSeek-R1-0528';
+          const constrainedSystemPrompt = `${selectedUser.systemPrompt || ''}\nYou must answer the current round question directly and briefly. Do not avoid the question.`;
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: (conversations[currentUserId] || []).concat(newMessage).map(m => ({ role: m.isUserMessage ? 'user' : 'assistant', content: m.text })),
                     sessionId: activeSessionId,
-                    systemPrompt: selectedUser.systemPrompt,
+              systemPrompt: constrainedSystemPrompt,
                     modelId: modelId,
+                    roundQuestion: gameQuestion,
                 }),
             });
             
@@ -689,6 +842,7 @@ export default function Home() {
                     });
                 }
             }
+                setRemoteAnsweredRound(true);
         } else {
             await fetch('/api/talk', {
                 method: 'POST',
@@ -711,19 +865,58 @@ export default function Home() {
     const target = allUsersRef.current.find(u => u.name === invite.fromUser);
     if (target) {
         setSelectedUser(target);
-        setConversations(prev => ({ ...prev, [target.id]: prev[target.id] || [] }));
+      setConversations(prev => ({ ...prev, [target.id]: [] }));
         setAppState('chat');
         setGameState('playing');
+      setRoundNumber(1);
+      setLocalAnsweredRound(false);
+      setRemoteAnsweredRound(false);
+      setProfilerAnalysis(null);
     }
     setActiveInvite(null);
   };
 
   const handleVote = (vote: 'AI' | 'Human') => {
       if (!selectedUser) return;
-      const isActuallyHuman = selectedUser.isReal === true;
-      const isCorrect = (vote === 'Human' && isActuallyHuman) || (vote === 'AI' && !isActuallyHuman);
-      setGameResult(isCorrect ? 'won' : 'lost');
-      setGameState('result');
+
+      const submitVote = async () => {
+        const normalizedGuess: 'AI' | 'HUMAN' = vote === 'Human' ? 'HUMAN' : 'AI';
+
+        try {
+          const res = await fetch('/api/game/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: activeSessionId,
+              playerGuess: normalizedGuess,
+              decisionTime: new Date().toISOString(),
+              playerName: userName,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setGameResult(data.isCorrect ? 'won' : 'lost');
+            if (data.profilerAnalysis) {
+              setProfilerAnalysis(data.profilerAnalysis);
+            }
+            if (typeof data.question === 'string' && data.question.length > 0) {
+              setGameQuestion(data.question);
+            }
+            setGameState('result');
+            return;
+          }
+        } catch (e) {
+          console.error('[Submit] Failed to submit verdict:', e);
+        }
+
+        const isActuallyHuman = selectedUser.isReal === true;
+        const isCorrect = (vote === 'Human' && isActuallyHuman) || (vote === 'AI' && !isActuallyHuman);
+        setGameResult(isCorrect ? 'won' : 'lost');
+        setGameState('result');
+      };
+
+      submitVote();
   };
 
   const resetGame = () => {
@@ -735,6 +928,13 @@ export default function Home() {
     setIsTyping(false);
     setAiHandshakeUser(null);
     setOpponentTags([]);
+    setProfilerAnalysis(null);
+    setGameQuestion('');
+    setRoundNumber(1);
+    setLocalAnsweredRound(false);
+    setRemoteAnsweredRound(false);
+    setIsAdvancingRound(false);
+    roundTransitionRef.current = false;
     hasSignaledJudgingRef.current = false;
   };
 
@@ -1000,6 +1200,7 @@ export default function Home() {
                  <button type="submit" disabled={userTags.length >= 6} className={`px-2 py-1 bg-gray-900 ${themeText} text-[10px] rounded hover:bg-gray-800`}>+</button>
                </form>
             </div>
+
           </aside>
           
           {/* Invite/Modal Overlays (Logic Preserved) */}
@@ -1074,6 +1275,12 @@ export default function Home() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-gray-950">
+               {gameQuestion && (
+                 <div className="border border-yellow-700 bg-yellow-950/30 p-4">
+                   <div className="text-[10px] uppercase tracking-widest text-yellow-400 mb-2">Architect Question</div>
+                   <p className="text-yellow-100 text-sm">{gameQuestion}</p>
+                 </div>
+               )}
                {currentMessages.map((message) => (
                  <div key={message.id} className={`flex ${message.isUserMessage ? 'justify-end' : 'justify-start'}`}>
                    <div className={`relative max-w-[70%] p-6 text-xl border-2 ${
@@ -1142,6 +1349,23 @@ export default function Home() {
                {gameResult === 'won' ? 'VERIFIED' : 'ERROR'}
              </h2>
              <p className="text-3xl text-white mb-12">Subject was: <span className="font-bold">{selectedUser?.isReal ? 'BIOLOGICAL' : 'SYNTHETIC'}</span></p>
+             {profilerAnalysis && (
+               <div className="mb-10 text-left max-w-3xl mx-auto bg-black/60 border border-slate-700 p-6">
+                 <h3 className="text-lg font-bold text-cyan-300 mb-3 uppercase tracking-wider">Profiler Report</h3>
+                 <p className="text-slate-300 text-sm mb-4">{profilerAnalysis.summary}</p>
+                 <div className="grid grid-cols-2 gap-3 text-xs text-slate-200 mb-4">
+                   <div>Machine Likeness: <span className="text-cyan-300 font-bold">{profilerAnalysis.machineLikeness}</span></div>
+                   <div>Rationality: <span className="text-cyan-300 font-bold">{profilerAnalysis.rationality}</span></div>
+                   <div>Emotional Saturation: <span className="text-cyan-300 font-bold">{profilerAnalysis.emotionalSaturation}</span></div>
+                   <div>Cognitive Bias: <span className="text-cyan-300 font-bold">{profilerAnalysis.cognitiveBias}</span></div>
+                 </div>
+                 {profilerAnalysis.linguisticFingerprint && (
+                   <div className="text-xs text-slate-300">
+                     Fluency Bias: {profilerAnalysis.linguisticFingerprint.fluencyBias} | Lexical Divergence: {profilerAnalysis.linguisticFingerprint.lexicalDivergence}
+                   </div>
+                 )}
+               </div>
+             )}
              <button onClick={resetGame} className="bg-white text-black px-12 py-6 font-black text-3xl uppercase hover:bg-gray-300">
                NEXT SUBJECT
              </button>

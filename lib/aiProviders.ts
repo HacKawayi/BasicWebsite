@@ -23,25 +23,21 @@ export interface ModelConfig {
   temperature?: number;
 }
 
+export type AgentRole = 'architect' | 'profiler';
+
 /**
  * Default models available in the system
  */
 export const DEFAULT_MODELS: ModelConfig[] = [
   {
-    modelId: 'Qwen/Qwen2.5-7B-Instruct',
-    displayName: 'Qwen',
-    maxOutputTokens: 300,
-    temperature: 0.7,
-  },
-  {
-    modelId: 'deepseek-ai/DeepSeek-R1-0528',
-    displayName: 'DeepSeek',
+    modelId: 'Qwen/Qwen3.5-27B',
+    displayName: 'Qwen/Qwen3.5-27B',
     maxOutputTokens: 300,
     temperature: 0.7,
   },
   // {
-  //   modelId: 'MiniMax/MiniMax-M1-80k',
-  //   displayName: 'MiniMax',
+  //   modelId: 'meituan-longcat/LongCat-Flash-Lite',
+  //   displayName: 'LongCat',
   //   maxOutputTokens: 300,
   //   temperature: 0.7,
   // },
@@ -63,13 +59,31 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   //     maxOutputTokens: 300,
   //     temperature: 0.7,
   // },
-  {
-      modelId: 'Qwen/Qwen2.5-7B-Instruct-1M',
-      displayName: 'Qwen',
-      maxOutputTokens: 300,
-      temperature: 0.7,
-  },
 ];
+
+/**
+ * Dedicated model mappings for game agents.
+ * Keep this separate from DEFAULT_MODELS so architect/profiler can evolve independently.
+ */
+export const AGENT_MODEL_MAP: Record<AgentRole, ModelConfig[]> = {
+  architect: [
+    {
+      modelId: 'Qwen/Qwen3.5-27B',
+      displayName: 'Qwen/Qwen3.5-27B',
+      maxOutputTokens: 220,
+      temperature: 0.85,
+    },
+  ],
+  profiler: [
+    {
+      modelId: 'Qwen/Qwen3.5-27B',
+      displayName: 'Qwen/Qwen3.5-27B',
+      maxOutputTokens: 600,
+      temperature: 0.2,
+    },
+    
+  ],
+};
 
 /**
  * Provider interface for consistency
@@ -119,6 +133,7 @@ export class AIModelProvider {
       messages: options.messages,
       temperature: options.temperature ?? this.config.temperature ?? 0.8,
       maxOutputTokens: options.maxOutputTokens ?? this.config.maxOutputTokens ?? 250,
+      maxRetries: 1,
       onFinish: options.onFinish,
     });
   }
@@ -138,6 +153,7 @@ export class AIModelProvider {
       prompt: promptText,
       temperature: options.temperature ?? this.config.temperature ?? 0.7,
       maxOutputTokens: options.maxOutputTokens ?? this.config.maxOutputTokens ?? 800,
+      maxRetries: 1,
     });
 
     return text;
@@ -185,29 +201,50 @@ export function createProviderById(modelId: string): AIModelProvider | null {
     console.warn(`[Providers] Model ${modelId} not found in DEFAULT_MODELS`);
     return null;
   }
-  let apiKey: string | undefined;
-  let baseURL: string | undefined;
-  /**
-   * 在这里增加
-   * APIKEY
-   * BASEURL
-   * 的多样化配置
-   *  */
-  if(config.displayName == 'deepseek')
-  {
-    apiKey = process.env.MODELSCOPE_API_KEY;
-    baseURL = process.env.MODELSCOPE_BASE_URL;
-  }
-  else
-  {
-    apiKey = process.env.MODELSCOPE_API_KEY;
-    baseURL = process.env.MODELSCOPE_BASE_URL;
-  }
+  const apiKey = process.env.MODELSCOPE_API_KEY;
+  const baseURL = process.env.MODELSCOPE_BASE_URL;
   if (!apiKey || !baseURL) {
     console.warn('[Providers] ModelScope credentials not configured');
     return null;
   }
   return new AIModelProvider(config, apiKey, baseURL);
+}
+
+/**
+ * Agent model registry to isolate Architect/Profiler model selection and validation.
+ */
+export class GameAgentProviderRegistry {
+  static getModelConfigs(role: AgentRole): ModelConfig[] {
+    const roleModels = AGENT_MODEL_MAP[role] || [];
+    const resolved = roleModels
+      .map((cfg) => DEFAULT_MODELS.find((m) => m.modelId === cfg.modelId))
+      .filter((cfg): cfg is ModelConfig => Boolean(cfg))
+      .filter((cfg, idx, arr) => arr.findIndex((x) => x.modelId === cfg.modelId) === idx);
+
+    if (resolved.length === 0) {
+      console.warn(`[AgentRegistry] No valid models configured for role ${role}; falling back to DEFAULT_MODELS`);
+      return DEFAULT_MODELS;
+    }
+
+    return resolved;
+  }
+
+  static getDefaultModelId(role: AgentRole): string {
+    const models = this.getModelConfigs(role);
+    return models[0]?.modelId || DEFAULT_MODELS[0]?.modelId || 'deepseek-ai/DeepSeek-R1-0528';
+  }
+
+  static isSupportedModel(role: AgentRole, modelId: string): boolean {
+    return this.getModelConfigs(role).some((m) => m.modelId === modelId);
+  }
+
+  static createProvider(role: AgentRole, requestedModelId?: string): AIModelProvider | null {
+    const modelId =
+      requestedModelId && this.isSupportedModel(role, requestedModelId)
+        ? requestedModelId
+        : this.getDefaultModelId(role);
+    return createProviderById(modelId);
+  }
 }
 
 /**
